@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HazeNote V3.4</title>
+    <title>HazeNote V3.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -25,6 +26,10 @@
                     },
                     fontFamily: {
                         sans: ['Urbanist', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'deep': '0 20px 50px -12px rgba(0, 0, 0, 1)', // 深度阴影
+                        'glow': '0 0 25px rgba(133, 185, 201, 0.15)', // 微光
                     }
                 }
             }
@@ -38,14 +43,13 @@
             color: white; 
             font-family: 'Urbanist', sans-serif;
             overscroll-behavior: none; 
-            user-select: none; /* 禁止选中文本，优化拖拽体验 */
+            user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* 全局接管触摸，防止滚动冲突 */
+            touch-action: none;
         }
         
-        /* 允许列表区域滚动 */
         #noteList { touch-action: pan-y; }
-        #noteInput { touch-action: auto; user-select: auto; -webkit-user-select: auto; }
+        #noteInput { touch-action: auto; user-select: auto; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -63,8 +67,8 @@
         /* 搜索框动画 */
         .search-bar-enter { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .search-bar-exit { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideDown { from { height: 0; opacity: 0; margin-bottom: 0; } to { height: 50px; opacity: 1; margin-bottom: 20px; } }
-        @keyframes slideUp { from { height: 50px; opacity: 1; margin-bottom: 20px; } to { height: 0; opacity: 0; margin-bottom: 0; } }
+        @keyframes slideDown { from { height: 0; opacity: 0; } to { height: 50px; opacity: 1; } }
+        @keyframes slideUp { from { height: 50px; opacity: 1; } to { height: 0; opacity: 0; } }
 
         /* 滑动操作样式 */
         .note-container {
@@ -81,65 +85,40 @@
             transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .note-actions {
-            position: absolute;
-            top: 0; right: 0; bottom: 0;
-            width: 100%;
-            display: flex; justify-content: flex-end; align-items: center;
+            position: absolute; top: 0; right: 0; bottom: 0;
+            width: 100%; display: flex; justify-content: flex-end; align-items: center;
             padding-right: 20px; gap: 12px;
-            background: #1a1a1a; z-index: 1;
-            border-radius: 32px;
+            background: #1a1a1a; z-index: 1; border-radius: 32px;
         }
         
-        /* --- AssistiveTouch 核心样式 --- */
-        #floatingContainer {
-            position: fixed;
-            z-index: 999;
-            touch-action: none; /* 禁止浏览器默认行为，完全由JS接管拖拽 */
-        }
-
-        /* 呼吸灯效果 */
+        /* AssistiveTouch */
+        #floatingContainer { position: fixed; z-index: 999; touch-action: none; }
         @keyframes breathe {
             0% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
             50% { box-shadow: 0 0 20px 4px rgba(133, 185, 201, 0.6); }
             100% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
         }
-        
-        .assistive-btn {
-            animation: breathe 3s infinite ease-in-out;
-            transition: transform 0.1s;
-        }
-        
-        /* 拖拽时稍微放大 */
-        .assistive-btn.dragging {
-            animation: none;
-            transform: scale(1.1);
-            opacity: 0.9;
+        .assistive-btn { animation: breathe 3s infinite ease-in-out; transition: transform 0.1s; }
+        .assistive-btn.dragging { animation: none; transform: scale(1.1); opacity: 0.9; }
+        .progress-ring__circle { transition: stroke-dashoffset 0.1s linear; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .ring-filling { transition: stroke-dashoffset 3s linear !important; stroke-dashoffset: 0 !important; }
+        .menu-pop { animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes menuPop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+
+        /* Deep Shadow for Top Card (Blue Box Request) */
+        .card-hero-shadow {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(133, 185, 201, 0.1); 
         }
 
-        /* 进度圆环 */
-        .progress-ring__circle {
-            transition: stroke-dashoffset 0.1s linear; /* 默认快速重置 */
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
+        /* 隐藏的截图区域 */
+        #shareCaptureArea {
+            position: fixed; top: -9999px; left: -9999px;
+            width: 1080px; height: 1920px; /* HD Ratio */
+            background: #000;
+            display: flex; flex-direction: column;
+            padding: 120px;
+            font-family: 'Urbanist', sans-serif;
         }
-        
-        /* 长按时的动画类：覆盖上面的 transition，变成3秒线性 */
-        .ring-filling {
-            transition: stroke-dashoffset 3s linear !important;
-            stroke-dashoffset: 0 !important;
-        }
-
-        /* 菜单弹窗 */
-        .menu-pop { 
-            animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
-        }
-        @keyframes menuPop { 
-            from { opacity: 0; transform: scale(0.5); } 
-            to { opacity: 1; transform: scale(1); } 
-        }
-
-        /* Pinned Style */
-        .pinned-glow { box-shadow: 0 0 0 2px #85B9C9, 0 0 20px rgba(133, 185, 201, 0.3); }
 
         textarea:focus { outline: none; }
     </style>
@@ -152,43 +131,50 @@
     <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/50 backdrop-blur-sm">
         
         <header class="px-6 pt-14 pb-2 z-20 pointer-events-auto">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-teal to-purple p-[2px]">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-teal to-purple p-[2px] shadow-glow">
                         <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Haze" class="w-full h-full rounded-full bg-black">
                     </div>
-                    <div>
-                        <p class="text-xs text-gray-400 font-medium">Welcome back</p>
-                        <h1 class="text-2xl font-bold text-white tracking-tight">HazeNote</h1>
-                    </div>
+                    <h1 class="text-4xl font-bold text-white tracking-tight leading-none mt-1">My<br/>Notes</h1>
                 </div>
-                <button onclick="toggleSearch()" class="w-10 h-10 rounded-full bg-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                
+                <button onclick="toggleSearch()" class="w-12 h-12 rounded-full bg-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
                 </button>
             </div>
 
-            <div id="searchContainer" class="hidden overflow-hidden">
+            <div id="searchContainer" class="hidden overflow-hidden mb-4">
                 <div class="bg-dark border border-white/10 rounded-2xl h-full flex items-center px-4">
                     <i class="fa-solid fa-filter text-teal mr-3"></i>
-                    <input id="searchInput" type="text" placeholder="Search keyword..." class="bg-transparent w-full text-white placeholder-gray-600 outline-none h-12" oninput="handleSearch(this.value)">
+                    <input id="searchInput" type="text" placeholder="Search..." class="bg-transparent w-full text-white placeholder-gray-600 outline-none h-12" oninput="handleSearch(this.value)">
                     <button onclick="toggleSearch()" class="text-gray-500"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
 
-            <div class="flex justify-between items-end mt-2">
-                <h2 id="viewTitle" class="text-4xl font-bold text-white leading-none">My<br/>Notes</h2>
-                <div class="flex gap-2">
-                    <span id="pinCountBadge" class="text-xs bg-purple/20 text-purple px-2 py-1 rounded-lg border border-purple/20 hidden">📌 0/3</span>
-                    <div class="bg-dark border border-white/10 px-3 py-1 rounded-full text-xs text-gray-400 font-mono" id="noteCount">0 Notes</div>
+            <div class="flex items-center gap-3 pl-1">
+                <div class="bg-dark border border-white/10 px-4 py-1.5 rounded-full text-xs text-gray-400 font-bold tracking-wide" id="noteCount">
+                    0 Notes
+                </div>
+                <span id="pinCountBadge" class="text-xs bg-purple/20 text-purple px-3 py-1.5 rounded-full border border-purple/20 font-bold hidden">
+                    📌 0/3
+                </span>
+                <div class="bg-dark border border-white/10 px-4 py-1.5 rounded-full text-xs text-teal font-bold tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-pen-nib text-[10px]"></i> <span id="wordCount">0</span>
                 </div>
             </div>
         </header>
 
-        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-4 no-scrollbar touch-pan-y">
+        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-6 no-scrollbar touch-pan-y">
             </main>
 
         <div id="floatingContainer" style="top: 80%; left: 80%;">
             <div id="assistiveMenu" class="absolute bottom-20 right-0 bg-[#1A1A1A]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 w-48 shadow-2xl hidden flex-col gap-1 origin-bottom-right z-50">
+                
+                <button onclick="closeMenu()" class="absolute -top-3 -right-3 w-8 h-8 bg-dark border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white shadow-lg z-50">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+
                 <button onclick="changeView('list')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
                     <i class="fa-solid fa-list text-teal w-5"></i> <span>List View</span>
                 </button>
@@ -209,8 +195,7 @@
                     <circle id="ringCircle" class="progress-ring__circle" stroke="#85B9C9" stroke-width="4" fill="transparent" r="28" cx="32" cy="32" 
                             style="stroke-dasharray: 175.9; stroke-dashoffset: 175.9;"/>
                 </svg>
-                
-                <div id="assistiveBtn" class="assistive-btn w-14 h-14 rounded-full bg-teal text-black text-2xl flex items-center justify-center z-10 cursor-pointer">
+                <div id="assistiveBtn" class="assistive-btn w-14 h-14 rounded-full bg-teal text-black text-2xl flex items-center justify-center z-10 cursor-pointer shadow-glow">
                     <i class="fa-solid fa-plus pointer-events-none"></i>
                 </div>
             </div>
@@ -238,6 +223,25 @@
         </div>
     </div>
 
+    <div id="shareCaptureArea">
+        <div class="flex-1 flex flex-col justify-center">
+            <div class="w-20 h-1 bg-teal mb-12"></div>
+            <p id="shareTextContent" class="text-[80px] font-bold leading-tight text-white mb-8"></p>
+            <p id="shareDateContent" class="text-[40px] text-gray-400 font-mono mt-8"></p>
+        </div>
+        <div class="flex justify-between items-end border-t border-white/20 pt-10">
+            <div>
+                <h1 class="text-[60px] font-bold text-white leading-none">HazeNote</h1>
+                <p class="text-[30px] text-gray-500 mt-2">Capture thoughts in style.</p>
+            </div>
+            <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-teal to-purple p-1">
+                <div class="w-full h-full bg-black rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-bolt text-teal text-[40px]"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
 
     <script>
@@ -252,7 +256,7 @@
 
         window.onload = () => {
             loadNotes();
-            initDraggableButton(); // 初始化拖拽逻辑
+            initDraggableButton();
         };
 
         function loadNotes() {
@@ -267,103 +271,76 @@
             renderNotes();
         }
 
-        // ========== 核心交互：拖拽 + 长按 + 单击 ==========
+        // ========== 拖拽与菜单逻辑 ==========
         function initDraggableButton() {
             const container = document.getElementById('floatingContainer');
             const btn = document.getElementById('assistiveBtn');
             const ring = document.getElementById('ringCircle');
             const menu = document.getElementById('assistiveMenu');
             
-            // 状态变量
-            let isDragging = false;
-            let startX, startY, initialLeft, initialTop;
-            let longPressTimer = null;
-            let isLongPressTriggered = false;
+            let isDragging = false, startX, startY, initialLeft, initialTop, longPressTimer, isLongPressTriggered = false;
 
-            // 1. 触摸开始
             btn.addEventListener('touchstart', (e) => {
-                e.preventDefault(); // 防止滚动
+                e.preventDefault();
                 const touch = e.touches[0];
-                
-                // 记录初始位置
-                startX = touch.clientX;
-                startY = touch.clientY;
+                startX = touch.clientX; startY = touch.clientY;
                 const rect = container.getBoundingClientRect();
-                initialLeft = rect.left;
-                initialTop = rect.top;
+                initialLeft = rect.left; initialTop = rect.top;
+                isDragging = false; isLongPressTriggered = false;
                 
-                isDragging = false;
-                isLongPressTriggered = false;
-                
-                // 隐藏菜单（如果之前打开了）
-                menu.classList.add('hidden');
-                menu.classList.remove('menu-pop');
-
-                // 开始长按动画
+                menu.classList.add('hidden'); // Close menu on new touch
                 ring.classList.add('ring-filling'); 
-                btn.classList.add('scale-90'); // 按下反馈
+                btn.classList.add('scale-90');
 
-                // 启动定时器
                 longPressTimer = setTimeout(() => {
                     isLongPressTriggered = true;
                     if(navigator.vibrate) navigator.vibrate(50);
-                    // 显示菜单
                     menu.classList.remove('hidden');
                     menu.classList.add('menu-pop');
-                    // 重置圆环
                     ring.classList.remove('ring-filling');
                 }, CONFIG.LONG_PRESS_MS);
             }, {passive: false});
 
-            // 2. 触摸移动 (拖拽逻辑)
             btn.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 const touch = e.touches[0];
                 const deltaX = touch.clientX - startX;
                 const deltaY = touch.clientY - startY;
 
-                // 如果移动超过 5px，视为拖拽，取消长按
                 if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
                     isDragging = true;
                     clearTimeout(longPressTimer);
-                    ring.classList.remove('ring-filling'); // 立即取消动画
-                    btn.classList.add('dragging'); // 改变样式
+                    ring.classList.remove('ring-filling');
+                    btn.classList.add('dragging');
                     btn.classList.remove('scale-90');
                 }
 
                 if (isDragging) {
-                    // 更新位置
                     container.style.left = `${initialLeft + deltaX}px`;
                     container.style.top = `${initialTop + deltaY}px`;
                 }
             }, {passive: false});
 
-            // 3. 触摸结束
             const endInteraction = () => {
                 clearTimeout(longPressTimer);
-                ring.classList.remove('ring-filling'); // 重置动画
+                ring.classList.remove('ring-filling');
                 btn.classList.remove('scale-90');
                 btn.classList.remove('dragging');
-
-                if (isDragging) {
-                    // 拖拽结束，什么都不做，位置保留
-                    // 可以加吸附逻辑，但用户要求“自由拖到想拖的地方”
-                } else if (!isLongPressTriggered) {
-                    // 不是拖拽，也没触发长按 -> 视为单击
-                    openNewNoteModal();
-                }
-                // 如果 isLongPressTriggered 为 true，菜单已经打开了，不用处理
+                if (!isDragging && !isLongPressTriggered) openNewNoteModal();
             };
 
             btn.addEventListener('touchend', endInteraction);
-            btn.addEventListener('touchcancel', endInteraction);
         }
 
-        // ========== 视图与搜索 ==========
+        function closeMenu() {
+            document.getElementById('assistiveMenu').classList.add('hidden');
+        }
+
+        // ========== 视图逻辑 ==========
         function changeView(mode) {
             state.viewMode = mode;
             saveToLocal();
-            document.getElementById('assistiveMenu').classList.add('hidden');
+            closeMenu();
         }
 
         function toggleSearch() {
@@ -393,14 +370,18 @@
             const list = document.getElementById('noteList');
             let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
             
-            // 排序: 置顶 > 日期
             displayNotes.sort((a, b) => {
                 if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
                 return new Date(b.date) - new Date(a.date);
             });
 
-            // 统计
+            // Update Counts (Green Area)
             document.getElementById('noteCount').innerText = `${displayNotes.length} Notes`;
+            
+            // Calc Total Chars/Words
+            const totalChars = displayNotes.reduce((acc, note) => acc + note.content.length, 0);
+            document.getElementById('wordCount').innerText = totalChars;
+
             const pinnedCount = state.notes.filter(n => n.isPinned).length;
             const badge = document.getElementById('pinCountBadge');
             pinnedCount > 0 ? (badge.classList.remove('hidden'), badge.innerText = `📌 ${pinnedCount}/${CONFIG.PIN_LIMIT}`) : badge.classList.add('hidden');
@@ -415,6 +396,7 @@
                 let style = 'dark-simple';
                 if (state.viewMode === 'list') style = 'list';
                 else {
+                    // Top card logic: if not searching, first card gets HERO style
                     if (index === 0 && !state.searchQuery) style = 'large-hero';
                     else if (note.color === 'orange') style = 'orange-typo';
                     else if (note.color === 'teal') style = 'teal-block';
@@ -428,23 +410,29 @@
 
         function createNoteCard(note, styleType) {
             const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-            const pinnedClass = note.isPinned ? 'pinned-glow' : '';
-            const pinIcon = note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal absolute top-4 right-4 z-20"></i>' : '';
+            
+            // Blue Box Area: Enhanced Shadow Logic
+            const heroShadow = (styleType === 'large-hero') ? 'card-hero-shadow' : '';
+            const pinnedBorder = note.isPinned ? 'border-teal/50 border-2' : 'border-white/5';
+            const pinIcon = note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal absolute top-5 right-5 z-20 text-lg"></i>' : '';
 
-            let inner = '', wrapperClass = `note-card-content w-full rounded-[32px] p-6 relative z-10 overflow-hidden border border-white/5 ${pinnedClass} `;
+            let inner = '', wrapperClass = `note-card-content w-full rounded-[32px] p-6 relative z-10 overflow-hidden border ${pinnedBorder} ${heroShadow} `;
 
             if (styleType === 'list') {
                 wrapperClass += `bg-[#1A1A1A] min-h-[100px] flex items-center justify-between`;
                 inner = `<div class="flex-1 pr-4"><p class="text-gray-200 font-medium line-clamp-1 text-lg">${note.content}</p><span class="text-xs text-gray-500 mt-1 block">${dateStr}</span></div>${note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal text-sm"></i>' : ''}`;
             } else if (styleType === 'large-hero') {
-                wrapperClass += `bg-[#111111] min-h-[200px] flex flex-col justify-between`;
-                inner = `${pinIcon}<div class="mt-2"><span class="bg-teal text-black text-xs font-bold px-2 py-1 rounded">TODAY</span></div><p class="text-2xl font-bold text-gray-100 line-clamp-4 mt-4">${note.content}</p><div class="mt-4 text-xs text-gray-500 font-mono text-right">${dateStr}</div>`;
+                wrapperClass += `bg-[#111111] min-h-[220px] flex flex-col justify-between`;
+                inner = `${pinIcon}
+                        <div class="mt-1"><span class="bg-teal text-black text-[10px] font-bold px-2 py-1 rounded tracking-wider">TODAY</span></div>
+                        <p class="text-3xl font-bold text-gray-100 line-clamp-4 mt-4 leading-tight">${note.content}</p>
+                        <div class="mt-4 text-xs text-gray-500 font-mono text-right">${dateStr}</div>`;
             } else if (styleType === 'orange-typo') {
                 wrapperClass += `bg-orange text-black min-h-[160px] flex items-center justify-center text-center`;
-                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}<p class="text-4xl font-black uppercase leading-none break-all line-clamp-3">${note.content}</p><span class="absolute bottom-3 right-5 text-xs font-bold opacity-60">${dateStr}</span>`;
+                inner = `${pinIcon}<p class="text-4xl font-black uppercase leading-none break-all line-clamp-3">${note.content}</p><span class="absolute bottom-3 right-5 text-xs font-bold opacity-60">${dateStr}</span>`;
             } else if (styleType === 'teal-block') {
                 wrapperClass += `bg-teal text-black min-h-[140px]`;
-                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}<p class="text-lg font-bold leading-tight line-clamp-4">${note.content}</p><div class="mt-4 pt-2 border-t border-black/10 text-xs font-bold opacity-60 flex justify-between"><span>Memo</span><span>${dateStr}</span></div>`;
+                inner = `${pinIcon}<p class="text-lg font-bold leading-tight line-clamp-4">${note.content}</p><div class="mt-4 pt-2 border-t border-black/10 text-xs font-bold opacity-60 flex justify-between"><span>Memo</span><span>${dateStr}</span></div>`;
             } else if (styleType === 'light-clean') {
                 wrapperClass += `bg-[#F6F6F6] text-black min-h-[140px]`;
                 inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-gray-400 absolute top-4 right-4 z-20"></i>' : ''}<h3 class="text-sm font-bold text-gray-400 mb-2">NOTE</h3><p class="text-gray-800 font-medium line-clamp-3">${note.content}</p>`;
@@ -453,17 +441,71 @@
                 inner = `${pinIcon}<p class="text-gray-300 font-medium line-clamp-3 mb-6">${note.content}</p><span class="absolute bottom-4 right-6 text-xs text-gray-600 font-bold tracking-widest">${dateStr}</span>`;
             }
 
-            return `<div class="note-container" data-id="${note.id}"><div class="note-actions"><button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white"><i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-teal' : ''}"></i></button><button onclick="shareNote('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white"><i class="fa-solid fa-bolt"></i></button><button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger hover:bg-danger hover:text-white"><i class="fa-solid fa-trash"></i></button></div><div class="${wrapperClass}" id="card-${note.id}">${inner}</div></div>`;
+            return `
+            <div class="note-container" data-id="${note.id}">
+                <div class="note-actions">
+                    <button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-teal' : ''}"></i>
+                    </button>
+                    <button onclick="generateShareImage('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                    <button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger hover:bg-danger hover:text-white transition">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <div class="${wrapperClass}" id="card-${note.id}">${inner}</div>
+            </div>`;
         }
 
-        // ========== 手势 ==========
+        // ========== Share (High Quality Image) ==========
+        function generateShareImage(id) {
+            const note = state.notes.find(n => n.id === id);
+            if(!note) return;
+
+            // 1. Populate Hidden Area
+            const capture = document.getElementById('shareCaptureArea');
+            const dateStr = new Date(note.date).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            // Dynamic Styling based on note color
+            if(note.color === 'orange') capture.style.background = '#FF6B4A';
+            else if(note.color === 'teal') capture.style.background = '#85B9C9';
+            else capture.style.background = '#111111'; // default dark
+
+            // Text Color contrast
+            const textColor = (note.color === 'dark' || note.color === undefined) ? 'text-white' : 'text-black';
+            document.getElementById('shareTextContent').className = `text-[80px] font-bold leading-tight mb-8 ${textColor}`;
+            document.getElementById('shareDateContent').className = `text-[40px] font-mono mt-8 ${textColor} opacity-60`;
+
+            document.getElementById('shareTextContent').innerText = note.content;
+            document.getElementById('shareDateContent').innerText = dateStr;
+
+            // 2. Generate Canvas
+            html2canvas(capture, {
+                scale: 1, // Already sized huge (1080x1920) in CSS
+                backgroundColor: null,
+                useCORS: true
+            }).then(canvas => {
+                const imgData = canvas.toDataURL("image/png");
+                
+                // 3. Trigger Download/Share
+                const link = document.createElement('a');
+                link.download = `HazeNote_Share_${Date.now()}.png`;
+                link.href = imgData;
+                link.click();
+            });
+            
+            // Reset swipe
+            document.querySelectorAll('.note-card-content').forEach(c => c.style.transform = `translateX(0)`);
+        }
+
+        // ========== Swipe Events ==========
         function bindSwipeEvents() {
             document.querySelectorAll('.note-container').forEach(el => {
                 const card = el.querySelector('.note-card-content');
                 let startX, currentX;
                 card.addEventListener('touchstart', e => {
                     startX = e.touches[0].clientX;
-                    // Reset others
                     document.querySelectorAll('.note-card-content').forEach(c => c !== card && (c.style.transform = `translateX(0)`));
                 }, {passive: true});
                 card.addEventListener('touchmove', e => {
@@ -478,7 +520,7 @@
             });
         }
 
-        // ========== 笔记功能 ==========
+        // ========== Note Logic ==========
         function setColor(c) {
             state.editingColor = c;
             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black'));
@@ -504,12 +546,7 @@
             note.isPinned = !note.isPinned; saveToLocal();
         }
         function confirmDelete(id) { if(confirm("Delete note?")) { state.notes = state.notes.filter(n => n.id !== id); saveToLocal(); } }
-        function shareNote(id) {
-            const n = state.notes.find(x => x.id === id);
-            navigator.share ? navigator.share({title:'HazeNote',text:n.content}) : (navigator.clipboard.writeText(n.content), alert('Copied'));
-        }
 
-        // ========== I/O ==========
         function exportData() {
             const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
             a.download = `HazeNote_${Date.now()}.json`; a.click();
