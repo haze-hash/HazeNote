@@ -3,25 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HazeNote V3</title>
+    <title>HazeNote Urban</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        dark: '#0a0a0a', // 截图中的深邃黑背景
-                        card: '#1a1a1a',
-                        purple: '#7B61FF', // 截图中的电光紫
-                        orange: '#FF6B4A', // 截图中的珊瑚橙
-                        yellow: '#D4A853', // 截图中的金色
+                        black: '#000000',     // 极致黑
+                        dark: '#111111',      // 卡片黑
+                        light: '#F6F6F6',     // 亮色卡片背景
+                        teal: '#85B9C9',      // 核心色：迷雾青
+                        peach: '#FFBE9D',     // 核心色：柔和桃 (视觉提取)
+                        purple: '#A29BFE',    // 核心色：静谧紫 (视觉提取)
+                        orange: '#FF6B4A',    // 强调色：深橙 (用于Year End Party卡片)
                     },
                     fontFamily: {
-                        sans: ['Inter', '-apple-system', 'sans-serif'],
-                        serif: ['"Noto Serif SC"', 'Georgia', 'serif'], // 用于大标题
+                        sans: ['Urbanist', 'sans-serif'], // 全局应用 Urbanist
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
                     }
                 }
             }
@@ -31,175 +37,167 @@
     <style>
         * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { 
-            background-color: #0a0a0a; 
+            background-color: #000000; 
             color: white; 
-            font-family: 'Inter', sans-serif;
+            font-family: 'Urbanist', sans-serif;
             overscroll-behavior: none; 
         }
         
-        /* 隐藏滚动条 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* === 核心视觉元素：有机流体形状 (Blobs) === */
-        /* 通过 border-radius 模拟截图中的不规则色块 */
-        .blob-purple {
-            background: linear-gradient(135deg, #8B71FF 0%, #7B61FF 50%, #6B51EF 100%);
-            border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
-            filter: blur(40px); /* 背景模糊 */
-            opacity: 0.6;
-        }
-        .blob-shape-card {
-            border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
-        }
-        
-        /* 浮动动画 */
-        .float { animation: float 10s ease-in-out infinite; }
-        @keyframes float { 
-            0%, 100% { transform: translateY(0) rotate(0deg) scale(1); } 
-            50% { transform: translateY(-20px) rotate(5deg) scale(1.05); }
+        /* === 有机波浪与形状 === */
+        /* 模拟截图中的拼图波浪效果 */
+        .wave-divider {
+            position: absolute;
+            width: 40px;
+            height: 100%;
+            background: radial-gradient(circle at 0 50%, transparent 25px, #FF6B4A 26px);
+            left: -40px;
+            top: 0;
+            z-index: 10;
         }
 
-        /* === 卡片风格 === */
-        .note-card {
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .note-card:active { transform: scale(0.98); }
-
-        /* 风格1：深色带流体 (类似截图 Task today) */
-        .card-style-dark {
-            background-color: #1a1a1a;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        /* 风格2：亮色排版 (类似截图 UI Trend) */
-        .card-style-light {
-            background-color: #f5f5f5;
-            color: #0a0a0a;
-        }
-        /* 风格3：橙色大字 (类似截图 Year End Party) */
-        .card-style-orange {
-            background: linear-gradient(135deg, #FF8B6A 0%, #FF6B4A 100%);
-            color: #0a0a0a;
+        .blob-bg {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: 0;
+            opacity: 0.5;
         }
 
-        /* 装饰用的流体 */
-        .card-blob {
+        /* 抽象装饰图形 - 还原截图中的 Task Today 背景 */
+        .abstract-shape-1 {
             position: absolute;
             top: -20px; right: -20px;
-            width: 100px; height: 100px;
-            background: #7B61FF;
+            width: 140px; height: 140px;
+            background: #FFBE9D;
             border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-            z-index: 0;
+        }
+        .abstract-shape-2 {
+            position: absolute;
+            top: 40px; right: -40px;
+            width: 120px; height: 120px;
+            background: #A29BFE;
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        }
+        
+        /* 细线装饰 */
+        .thin-line-circle {
+            position: absolute;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            width: 200px; height: 200px;
+            right: -80px; top: 20px;
+            transform: rotate(-15deg);
         }
 
-        /* 底部导航栏玻璃态 */
-        .glass-nav {
-            background: rgba(10, 10, 10, 0.85);
+        /* 登录页大字 */
+        .login-title {
+            font-size: 4rem;
+            line-height: 1;
+            font-weight: 800; /* ExtraBold */
+            letter-spacing: -0.02em;
+        }
+
+        /* 玻璃态 */
+        .glass {
+            background: rgba(17, 17, 17, 0.8);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
-        /* 按钮光晕 */
-        .glow-shadow {
-            box-shadow: 0 0 20px rgba(123, 97, 255, 0.3);
-        }
-
-        /* 字体类 */
-        .font-display { font-family: 'Noto Serif SC', serif; }
-        
-        /* 输入框聚焦 */
+        /* 输入框去样式 */
         textarea:focus { outline: none; }
+        
+        /* 动画 */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="flex justify-center min-h-screen overflow-hidden bg-dark">
+<body class="flex justify-center min-h-screen overflow-hidden bg-black selection:bg-teal selection:text-black">
 
-    <div class="fixed top-[-10%] right-[-20%] w-[300px] h-[300px] blob-purple float pointer-events-none z-0"></div>
-    <div class="fixed bottom-[10%] left-[-10%] w-[250px] h-[250px] blob-purple float pointer-events-none z-0" style="background: #FF6B4A; animation-delay: -5s;"></div>
+    <div class="blob-bg w-64 h-64 bg-teal/20 top-0 left-0"></div>
+    <div class="blob-bg w-80 h-80 bg-purple/20 bottom-0 right-0"></div>
 
-    <div id="loginScreen" class="w-full max-w-md h-full flex flex-col items-center justify-center px-8 relative z-50 bg-dark/95 backdrop-blur-xl">
-        <h1 class="text-6xl font-display font-bold text-white mb-2 tracking-tight">Haze<br/><span class="text-purple">Note.</span></h1>
-        <p class="text-gray-400 text-sm mb-12 tracking-wide font-serif italic">Capture your thoughts in style.</p>
+    <div id="loginScreen" class="w-full max-w-md h-full flex flex-col items-center justify-center px-8 relative z-50 bg-black">
+        <div class="text-left w-full mb-12">
+            <h1 class="login-title text-white mb-2">Haze<br/><span class="text-teal">Note.</span></h1>
+            <p class="text-gray-400 text-lg font-medium">Thoughts, clearer.</p>
+        </div>
         
-        <button id="passkeyBtn" onclick="handlePasskey()" class="w-full py-4 rounded-full bg-white text-dark font-bold text-lg shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-105 transition-transform flex items-center justify-center gap-2">
-            <i class="fa-solid fa-fingerprint text-xl"></i>
-            <span id="passkeyBtnText">Unlock with FaceID</span>
+        <button id="passkeyBtn" onclick="handlePasskey()" class="w-full py-5 rounded-full bg-white text-black font-bold text-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-3">
+            <i class="fa-solid fa-face-smile text-2xl"></i>
+            <span id="passkeyBtnText">Unlock</span>
         </button>
-        <div id="loginError" class="mt-4 text-orange text-sm hidden"></div>
+        <p class="mt-6 text-gray-600 text-sm">Secured by WebAuthn</p>
     </div>
 
-    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col hidden relative z-10">
+    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col hidden relative z-10 bg-black">
         
-        <header class="px-6 pt-14 pb-4 flex justify-between items-end z-20">
+        <header class="px-6 pt-14 pb-6 flex justify-between items-end z-20">
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Brian" class="w-6 h-6 rounded-full bg-gray-800" alt="Avatar">
-                    <span class="text-xs text-gray-400">Hi, Traveler</span>
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-teal to-purple p-[1px]">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix" class="w-full h-full rounded-full bg-black" alt="Avatar">
+                    </div>
+                    <span class="text-sm font-semibold text-gray-400">Hi, Designer</span>
                 </div>
-                <h1 class="text-5xl font-display font-light text-white leading-none">My<br/><span class="font-bold">Notes</span></h1>
+                <h1 class="text-5xl font-bold text-white leading-[0.9]">My<br/>Notes</h1>
             </div>
             
-            <div class="bg-[#1a1a1a] border border-white/10 rounded-full p-1 pl-4 flex items-center gap-3 h-12">
-                <i class="fa-solid fa-magnifying-glass text-gray-400 text-sm"></i>
-                <div class="bg-white text-dark font-bold rounded-full w-9 h-9 flex items-center justify-center text-sm" id="noteCountBadge">0</div>
+            <div class="bg-[#1A1A1A] rounded-full p-1 pl-5 pr-1 flex items-center gap-3 h-14 border border-white/5">
+                <i class="fa-solid fa-magnifying-glass text-white text-lg"></i>
+                <div class="bg-black text-white border border-white/10 font-bold rounded-full w-12 h-12 flex items-center justify-center text-lg" id="noteCountBadge">0</div>
             </div>
         </header>
 
-        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 space-y-4 no-scrollbar pt-2">
+        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 space-y-4 no-scrollbar">
             </main>
 
         <div class="fixed bottom-8 left-0 right-0 flex justify-center z-50 pointer-events-none">
-            <div class="pointer-events-auto bg-[#0a0a0a] border border-white/10 shadow-2xl rounded-[30px] px-2 py-2 flex items-center gap-2">
-                <button onclick="exportData()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
-                    <i class="fa-solid fa-file-export"></i>
+            <div class="pointer-events-auto bg-[#111111] border border-white/10 shadow-2xl rounded-[32px] px-6 py-4 flex items-center justify-between w-[85%] max-w-[340px]">
+                <button onclick="triggerImport()" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-file-arrow-up text-xl"></i>
                 </button>
                 
-                <button onclick="triggerImport()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
-                    <i class="fa-solid fa-file-import"></i>
+                <button onclick="exportData()" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-file-arrow-down text-xl"></i>
                 </button>
 
-                <button onclick="lockApp()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
-                    <i class="fa-solid fa-lock"></i>
+                 <button onclick="lockApp()" class="text-gray-500 hover:text-white transition">
+                    <i class="fa-solid fa-lock text-xl"></i>
                 </button>
 
-                <button onclick="openNewNoteModal()" class="w-16 h-12 rounded-[24px] bg-white text-black flex items-center justify-center ml-2 hover:scale-105 transition shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                    <i class="fa-solid fa-plus text-lg"></i>
+                <button onclick="openNewNoteModal()" class="w-12 h-12 rounded-2xl bg-teal text-black flex items-center justify-center hover:scale-105 transition shadow-lg shadow-teal/20">
+                    <i class="fa-solid fa-plus text-xl"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="noteModal" class="fixed inset-0 bg-dark z-[60] hidden flex flex-col">
+    <div id="noteModal" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
         <div class="px-6 pt-14 pb-4 flex justify-between items-center">
-            <button onclick="closeModal()" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white">
-                <i class="fa-solid fa-arrow-left"></i>
+            <button onclick="closeModal()" class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10 transition">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
             </button>
-            <div class="flex gap-2">
-                <div class="text-xs text-gray-400 border border-white/10 px-3 py-1 rounded-full flex items-center gap-2">
-                    <span id="modalDate">Today</span>
-                </div>
-            </div>
-            <button onclick="saveNote()" class="w-10 h-10 rounded-full bg-purple text-white flex items-center justify-center glow-shadow">
-                <i class="fa-solid fa-check"></i>
+            <span id="modalDate" class="font-bold text-gray-500 tracking-wide text-sm uppercase">Date</span>
+            <button onclick="saveNote()" class="w-12 h-12 rounded-full bg-teal text-black flex items-center justify-center font-bold text-sm hover:scale-105 transition">
+                OK
             </button>
         </div>
 
-        <div class="flex-1 px-6 pt-4">
-            <textarea id="noteInput" class="w-full h-full bg-transparent text-white text-xl leading-relaxed font-serif placeholder-gray-600 resize-none" placeholder="Start typing your thoughts..."></textarea>
+        <div class="flex-1 px-8 pt-4">
+            <textarea id="noteInput" class="w-full h-full bg-transparent text-white text-3xl font-semibold placeholder-gray-700 resize-none leading-normal" placeholder="Type something..."></textarea>
         </div>
 
-        <div class="px-6 pb-10 pt-4">
-            <div class="flex justify-between items-center bg-[#1a1a1a] p-2 rounded-2xl border border-white/5">
-                <div class="flex gap-2" id="colorPickerContainer">
-                    <button onclick="selectColor('dark')" class="w-8 h-8 rounded-full bg-[#1a1a1a] border border-white/20 ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a] color-btn"></button>
-                    <button onclick="selectColor('light')" class="w-8 h-8 rounded-full bg-[#f5f5f5] color-btn"></button>
-                    <button onclick="selectColor('orange')" class="w-8 h-8 rounded-full bg-[#FF6B4A] color-btn"></button>
-                    <button onclick="selectColor('purple')" class="w-8 h-8 rounded-full bg-[#7B61FF] color-btn"></button>
-                </div>
-                <span class="text-xs text-gray-500 font-mono" id="charCount">0/1000</span>
+        <div class="px-8 pb-10">
+            <div class="flex gap-4 overflow-x-auto py-2">
+                <button onclick="selectColor('dark')" class="w-10 h-10 rounded-full bg-[#111111] border border-white/20 ring-2 ring-white ring-offset-2 ring-offset-black color-btn"></button>
+                <button onclick="selectColor('teal')" class="w-10 h-10 rounded-full bg-teal color-btn"></button>
+                <button onclick="selectColor('orange')" class="w-10 h-10 rounded-full bg-orange color-btn"></button>
+                <button onclick="selectColor('light')" class="w-10 h-10 rounded-full bg-white color-btn"></button>
             </div>
         </div>
     </div>
@@ -207,133 +205,34 @@
     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
 
     <script>
-    /* 保留 V2 的核心逻辑 (Passkey, 加密, 存储)
-       重写 UI 渲染逻辑 (renderNotes) 以适配新设计
-    */
+    // ========== 核心逻辑 ==========
+    
+    // Passkey & Crypto (保留原功能)
+    const PasskeyModule={CREDENTIAL_KEY:'hazenote_passkey_credential',ENCRYPTION_KEY_STORAGE:'hazenote_passkey_encryption_key',isSupported(){return window.PublicKeyCredential!==undefined},hasCredential(){return localStorage.getItem(this.CREDENTIAL_KEY)!==null},bufferToBase64URL(buffer){const bytes=new Uint8Array(buffer);let str='';for(const byte of bytes)str+=String.fromCharCode(byte);return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')},base64URLToBuffer(base64url){const base64=base64url.replace(/-/g,'+').replace(/_/g,'/');const padded=base64+'='.repeat((4-base64.length%4)%4);const binary=atob(padded);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes.buffer},async register(){const userId=crypto.getRandomValues(new Uint8Array(16));const challenge=crypto.getRandomValues(new Uint8Array(32));const encryptionKey=this.bufferToBase64URL(crypto.getRandomValues(new Uint8Array(32)));const options={challenge,rp:{name:'HazeNote',id:location.hostname||'localhost'},user:{id:userId,name:'HazeNote User',displayName:'HazeNote User'},pubKeyCredParams:[{alg:-7,type:'public-key'},{alg:-257,type:'public-key'}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},timeout:60000,attestation:'none'};const credential=await navigator.credentials.create({publicKey:options});localStorage.setItem(this.CREDENTIAL_KEY,JSON.stringify({id:credential.id,rawId:this.bufferToBase64URL(credential.rawId)}));localStorage.setItem(this.ENCRYPTION_KEY_STORAGE,encryptionKey);return encryptionKey},async authenticate(){const stored=JSON.parse(localStorage.getItem(this.CREDENTIAL_KEY));if(!stored)throw new Error('NO_CREDENTIAL');const options={challenge:crypto.getRandomValues(new Uint8Array(32)),rpId:location.hostname||'localhost',allowCredentials:[{id:this.base64URLToBuffer(stored.rawId),type:'public-key',transports:['internal']}],userVerification:'required',timeout:60000};await navigator.credentials.get({publicKey:options});return localStorage.getItem(this.ENCRYPTION_KEY_STORAGE)}};
+    const CryptoModule={async importKey(keyString){const keyData=new TextEncoder().encode(keyString.padEnd(32,'0').substring(0,32));return crypto.subtle.importKey('raw',keyData,{name:'AES-GCM'},false,['encrypt','decrypt'])},async encrypt(data,keyString){const key=await this.importKey(keyString);const iv=crypto.getRandomValues(new Uint8Array(12));const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(data)));const result=new Uint8Array(iv.length+encrypted.byteLength);result.set(iv,0);result.set(new Uint8Array(encrypted),iv.length);return btoa(String.fromCharCode(...result))},async decrypt(encryptedBase64,keyString){try{const key=await this.importKey(keyString);const data=Uint8Array.from(atob(encryptedBase64),c=>c.charCodeAt(0));const decrypted=await crypto.subtle.decrypt({name:'AES-GCM',iv:data.slice(0,12)},key,data.slice(12));return JSON.parse(new TextDecoder().decode(decrypted))}catch{return null}}};
+    const DataModule={NOTES_KEY:'hazenote_encrypted_data',async save(notes,key){localStorage.setItem(this.NOTES_KEY,await CryptoModule.encrypt(notes,key))},async load(key){const d=localStorage.getItem(this.NOTES_KEY);return d?await CryptoModule.decrypt(d,key)||[]:[]}};
+    const Session={KEY:'hazenote_session',get(){const s=sessionStorage.getItem(this.KEY);return s?JSON.parse(s):null},set(key){sessionStorage.setItem(this.KEY,JSON.stringify({encryptionKey:key}))},clear(){sessionStorage.removeItem(this.KEY)}};
 
-    // ========== Passkey & Crypto Modules (保持不变) ==========
-    const PasskeyModule = {
-        CREDENTIAL_KEY: 'hazenote_passkey_credential',
-        ENCRYPTION_KEY_STORAGE: 'hazenote_passkey_encryption_key',
-        isSupported() { return window.PublicKeyCredential !== undefined; },
-        hasCredential() { return localStorage.getItem(this.CREDENTIAL_KEY) !== null; },
-        bufferToBase64URL(buffer) {
-            const bytes = new Uint8Array(buffer);
-            let str = ''; for (const byte of bytes) str += String.fromCharCode(byte);
-            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-        },
-        base64URLToBuffer(base64url) {
-            const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-            const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
-            const binary = atob(padded);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            return bytes.buffer;
-        },
-        async register() {
-            const userId = crypto.getRandomValues(new Uint8Array(16));
-            const challenge = crypto.getRandomValues(new Uint8Array(32));
-            const encryptionKey = this.bufferToBase64URL(crypto.getRandomValues(new Uint8Array(32)));
-            const options = {
-                challenge, rp: { name: 'HazeNote', id: location.hostname || 'localhost' },
-                user: { id: userId, name: 'HazeNote User', displayName: 'HazeNote User' },
-                pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
-                authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
-                timeout: 60000, attestation: 'none'
-            };
-            const credential = await navigator.credentials.create({ publicKey: options });
-            localStorage.setItem(this.CREDENTIAL_KEY, JSON.stringify({ id: credential.id, rawId: this.bufferToBase64URL(credential.rawId) }));
-            localStorage.setItem(this.ENCRYPTION_KEY_STORAGE, encryptionKey);
-            return encryptionKey;
-        },
-        async authenticate() {
-            const stored = JSON.parse(localStorage.getItem(this.CREDENTIAL_KEY));
-            if (!stored) throw new Error('NO_CREDENTIAL');
-            const options = {
-                challenge: crypto.getRandomValues(new Uint8Array(32)),
-                rpId: location.hostname || 'localhost',
-                allowCredentials: [{ id: this.base64URLToBuffer(stored.rawId), type: 'public-key', transports: ['internal'] }],
-                userVerification: 'required', timeout: 60000
-            };
-            await navigator.credentials.get({ publicKey: options });
-            return localStorage.getItem(this.ENCRYPTION_KEY_STORAGE);
-        }
-    };
-
-    const CryptoModule = {
-        async importKey(keyString) {
-            const keyData = new TextEncoder().encode(keyString.padEnd(32, '0').substring(0, 32));
-            return crypto.subtle.importKey('raw', keyData, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
-        },
-        async encrypt(data, keyString) {
-            const key = await this.importKey(keyString);
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(data)));
-            const result = new Uint8Array(iv.length + encrypted.byteLength);
-            result.set(iv, 0); result.set(new Uint8Array(encrypted), iv.length);
-            return btoa(String.fromCharCode(...result));
-        },
-        async decrypt(encryptedBase64, keyString) {
-            try {
-                const key = await this.importKey(keyString);
-                const data = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
-                const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: data.slice(0, 12) }, key, data.slice(12));
-                return JSON.parse(new TextDecoder().decode(decrypted));
-            } catch { return null; }
-        }
-    };
-
-    const DataModule = {
-        NOTES_KEY: 'hazenote_encrypted_data',
-        async save(notes, key) { localStorage.setItem(this.NOTES_KEY, await CryptoModule.encrypt(notes, key)); },
-        async load(key) { const d = localStorage.getItem(this.NOTES_KEY); return d ? await CryptoModule.decrypt(d, key) || [] : []; }
-    };
-
-    const Session = {
-        KEY: 'hazenote_session',
-        get() { const s = sessionStorage.getItem(this.KEY); return s ? JSON.parse(s) : null; },
-        set(key) { sessionStorage.setItem(this.KEY, JSON.stringify({ encryptionKey: key })); },
-        clear() { sessionStorage.removeItem(this.KEY); }
-    };
-
-    // ========== App Logic ==========
     let notes = [];
-    let selectedColor = 'dark'; // dark, light, orange, purple
+    let selectedColor = 'dark';
 
-    // 初始化
     window.onload = async () => {
-        if (!PasskeyModule.isSupported()) { 
-            alert('Your browser does not support Passkey.'); 
-            document.getElementById('passkeyBtn').style.display = 'none';
-        }
+        if (!PasskeyModule.isSupported()) document.getElementById('passkeyBtn').style.display = 'none';
         updateLoginBtn();
         const s = Session.get(); 
         if (s) await initApp(s.encryptionKey);
-        
-        // 字数统计监听
-        document.getElementById('noteInput').addEventListener('input', e => {
-            document.getElementById('charCount').textContent = e.target.value.length + '/1000';
-        });
     };
 
     function updateLoginBtn() {
         const has = PasskeyModule.hasCredential();
-        document.getElementById('passkeyBtnText').textContent = has ? 'Unlock with FaceID' : 'Create Secure Passkey';
+        document.getElementById('passkeyBtnText').textContent = has ? 'Unlock' : 'Create Passkey';
     }
 
     async function handlePasskey() {
         try {
             const key = PasskeyModule.hasCredential() ? await PasskeyModule.authenticate() : await PasskeyModule.register();
             Session.set(key); await initApp(key);
-        } catch (e) {
-            if (e.message === 'NO_CREDENTIAL') { 
-                alert('Passkey invalid. Please re-create.'); 
-                localStorage.removeItem(PasskeyModule.CREDENTIAL_KEY);
-                updateLoginBtn();
-            } else {
-                alert('Authentication failed.');
-            }
-        }
+        } catch (e) { alert('Authentication failed or cancelled.'); }
     }
 
     async function initApp(key) {
@@ -343,185 +242,187 @@
         renderNotes();
     }
 
-    function lockApp() {
-        Session.clear();
-        notes = [];
-        document.getElementById('mainApp').classList.add('hidden');
-        document.getElementById('loginScreen').classList.remove('hidden');
-    }
+    function lockApp() { Session.clear(); notes = []; document.getElementById('mainApp').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); }
 
-    // ========== 渲染逻辑 (UI的核心部分) ==========
+    // ========== 渲染逻辑 (Bento Grid) ==========
     function renderNotes() {
         const list = document.getElementById('noteList');
         list.innerHTML = '';
         document.getElementById('noteCountBadge').textContent = notes.length;
 
         if (notes.length === 0) {
-            list.innerHTML = `
-                <div class="mt-20 flex flex-col items-center opacity-30">
-                    <div class="w-24 h-24 blob-purple mb-4 rounded-full"></div>
-                    <p class="font-serif italic text-lg">No notes yet.</p>
-                </div>
-            `;
+            list.innerHTML = `<div class="mt-20 flex flex-col items-center opacity-30"><div class="text-6xl mb-4">🌑</div><p>Space is empty.</p></div>`;
             return;
         }
 
-        // 排序：最新的在最前
         notes.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-        notes.forEach(note => {
-            const el = document.createElement('div');
-            
-            // 根据颜色选择样式类
-            let styleClass = 'card-style-dark';
-            let blobEl = ''; // 只有 dark 模式加装饰斑点
-            let textColor = 'text-white';
-            let metaColor = 'text-gray-400';
-            let deleteBtnColor = 'text-gray-500 hover:text-white';
-            
-            if (note.color === 'light') {
-                styleClass = 'card-style-light';
-                textColor = 'text-black';
-                metaColor = 'text-gray-500';
-                deleteBtnColor = 'text-gray-400 hover:text-red-500';
-            } else if (note.color === 'orange') {
-                styleClass = 'card-style-orange';
-                textColor = 'text-black';
-                metaColor = 'text-gray-800';
-                deleteBtnColor = 'text-black/50 hover:text-black';
-            } else if (note.color === 'purple') {
-                styleClass = 'bg-[#7B61FF] text-white'; // Purple solid
-                textColor = 'text-white';
-                metaColor = 'text-white/70';
-                deleteBtnColor = 'text-white/60 hover:text-white';
-            } else {
-                // Dark (Default) - add blob decoration
-                blobEl = `<div class="card-blob opacity-20"></div>`;
-                // Random organic shape for dark cards to match screenshot variety
-                const shapes = ['rounded-[30px]', 'rounded-[30px_30px_30px_0]', 'rounded-[30px_30px_0_30px]'];
-                // el.className += ' ' + shapes[Math.floor(Math.random()*shapes.length)]; 
+        // 将笔记两两分组，以实现 Bento Grid 布局
+        // 第1个: 大卡片 (Task Today 风格)
+        // 第2个: 小卡片 (UI Trend 风格)
+        // 第3个: 灰色卡片 (拼图左)
+        // 第4个: 橙色卡片 (拼图右)
+        
+        let gridHTML = '';
+        
+        // 渲染第一行 (1大 + 1小)
+        if (notes[0]) gridHTML += createCardHTML(notes[0], 'large-dark');
+        
+        // 剩余的
+        if (notes.length > 1) {
+            for (let i = 1; i < notes.length; i++) {
+                const note = notes[i];
+                // 模拟截图中的拼图布局: 如果是偶数索引(在剩余列表中), 尝试和下一个组成拼图
+                // 这里简化逻辑：根据颜色或随机分配样式
+                let style = 'simple';
+                if (note.color === 'orange') style = 'orange-wave';
+                else if (note.color === 'light') style = 'light-simple';
+                else if (note.color === 'teal') style = 'teal-block';
+                else style = 'dark-simple';
+                
+                gridHTML += createCardHTML(note, style);
             }
-
-            el.className = `note-card w-full p-6 rounded-[32px] mb-4 flex flex-col justify-between min-h-[160px] cursor-pointer group ${styleClass}`;
-            
-            // Format Date
-            const d = new Date(note.date);
-            const dateStr = `${d.getDate()}th ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
-
-            // 根据截图：如果是 Orange，用大字体展示；如果是 Light/Dark，用标准排版
-            let contentHtml = '';
-            if (note.color === 'orange') {
-                contentHtml = `<p class="text-4xl font-display font-bold leading-tight line-clamp-3 mb-4">${note.content}</p>`;
-            } else {
-                contentHtml = `
-                    <h3 class="font-display text-2xl font-bold mb-2">Note</h3>
-                    <p class="text-base leading-relaxed opacity-90 line-clamp-3 font-sans">${note.content}</p>
-                `;
-            }
-
-            el.innerHTML = `
-                ${blobEl}
-                <div class="relative z-10 flex-1">
-                    ${contentHtml}
-                </div>
-                <div class="relative z-10 flex justify-between items-end mt-4">
-                    <span class="text-xs font-bold uppercase tracking-wider ${metaColor}">${dateStr}</span>
-                    <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="${deleteBtnColor} transition p-2 -mr-2">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            // 点击查看/复制逻辑 (简化为复制)
-            el.onclick = () => {
-                navigator.clipboard.writeText(note.content).then(() => alert('Copied to clipboard!'));
-            };
-
-            list.appendChild(el);
-        });
+        }
+        
+        list.innerHTML = gridHTML;
     }
 
-    // ========== 操作逻辑 ==========
+    function createCardHTML(note, type) {
+        const dateObj = new Date(note.date);
+        const dateStr = `${dateObj.getDate()} ${dateObj.toLocaleString('en', { month: 'short' })}`;
+        
+        // 1. 顶部大卡片 (Task Today 风格) - 黑底 + 装饰图形
+        if (type === 'large-dark') {
+            return `
+            <div onclick="copyText('${note.content}')" class="fade-in relative w-full bg-[#111111] rounded-[32px] p-6 mb-4 overflow-hidden min-h-[220px] border border-white/5 flex flex-col justify-between group">
+                <div class="abstract-shape-1"></div>
+                <div class="abstract-shape-2"></div>
+                <div class="thin-line-circle"></div>
+                
+                <div class="relative z-10 mt-8">
+                    <h2 class="text-4xl font-bold leading-tight mb-2 tracking-tight">Note<br/>Today</h2>
+                </div>
+                <div class="relative z-10 bg-[#FFE8D6] text-black p-4 rounded-2xl transform group-active:scale-95 transition-transform">
+                    <p class="text-sm font-medium line-clamp-3 leading-relaxed">${note.content}</p>
+                </div>
+                <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="absolute top-4 right-4 text-white/20 hover:text-white z-20"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>`;
+        }
+        
+        // 2. 橙色卡片 (Year End Party 风格) - 巨大的字体
+        if (type === 'orange-wave') {
+            return `
+            <div onclick="copyText('${note.content}')" class="fade-in w-full bg-[#FF6B4A] text-black rounded-[32px] p-6 mb-4 min-h-[180px] flex items-center justify-center text-center relative overflow-hidden group">
+                 <div class="absolute left-[-20px] top-[50%] transform -translate-y-1/2 w-10 h-10 bg-black rounded-full"></div>
+                 
+                 <p class="text-5xl font-black leading-none uppercase break-words w-full" style="word-spacing: 9999px;">${note.content.substring(0,12)}</p>
+                 <span class="absolute bottom-4 right-6 text-xs font-bold opacity-60">${dateStr}</span>
+                 <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="absolute top-4 right-4 opacity-30 hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }
+
+        // 3. 亮色卡片 (UI Trend 风格) - 白底黑字
+        if (type === 'light-simple') {
+            return `
+            <div onclick="copyText('${note.content}')" class="fade-in w-full bg-[#F6F6F6] text-black rounded-[32px] p-6 mb-4 border border-white/10 relative group">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="w-2 h-8 bg-black rounded-full"></div>
+                    <img src="https://api.dicebear.com/7.x/shapes/svg?seed=${note.id}" class="w-8 h-8 opacity-20">
+                </div>
+                <h3 class="text-2xl font-bold mb-1">Memo</h3>
+                <p class="text-gray-600 font-medium leading-snug line-clamp-3">${note.content}</p>
+                 <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="absolute top-6 right-6 text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+            </div>`;
+        }
+        
+        // 4. 青色卡片 (Urbanist 风格)
+        if (type === 'teal-block') {
+            return `
+            <div onclick="copyText('${note.content}')" class="fade-in w-full bg-teal text-black rounded-[32px] p-6 mb-4 relative group">
+                <p class="text-xl font-bold leading-tight line-clamp-4">${note.content}</p>
+                <div class="mt-4 flex justify-between items-center border-t border-black/10 pt-2">
+                    <span class="text-xs font-bold opacity-50">${dateStr}</span>
+                    <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="opacity-40 hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+        }
+
+        // 默认深色卡片 (Simple Dark)
+        return `
+        <div onclick="copyText('${note.content}')" class="fade-in w-full bg-[#1A1A1A] rounded-[32px] p-6 mb-4 border border-white/5 relative group">
+            <p class="text-lg text-gray-200 font-medium line-clamp-3 mb-6">${note.content}</p>
+            <span class="text-4xl font-bold text-gray-700 absolute bottom-[-10px] right-4 opacity-20">${dateStr.split(' ')[0]}</span>
+            <div class="absolute bottom-6 left-6 text-xs text-gray-500 font-bold uppercase tracking-widest">${dateStr}</div>
+            <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="absolute top-6 right-6 text-gray-600 hover:text-white"><i class="fa-solid fa-trash"></i></button>
+        </div>`;
+    }
+
+    // CRUD
     function selectColor(color) {
         selectedColor = color;
-        // Update UI ring
-        document.querySelectorAll('.color-btn').forEach(btn => {
-            btn.className = btn.className.replace('ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a]', '');
-        });
-        event.target.className += ' ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a]';
+        // Visual feedback
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white'));
+        event.target.classList.add('ring-2', 'ring-white');
     }
 
     function openNewNoteModal() {
         document.getElementById('noteInput').value = '';
-        document.getElementById('charCount').textContent = '0/1000';
-        // Reset color to dark
         selectColor('dark');
         document.getElementById('noteModal').classList.remove('hidden');
         document.getElementById('noteInput').focus();
-        
-        // Date in modal
-        const d = new Date();
-        document.getElementById('modalDate').textContent = `${d.toLocaleString('default', { weekday: 'short' })}, ${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+        document.getElementById('modalDate').innerText = new Date().toLocaleDateString('en', {weekday:'short', day:'numeric'}).toUpperCase();
     }
 
-    function closeModal() {
-        document.getElementById('noteModal').classList.add('hidden');
-    }
+    function closeModal() { document.getElementById('noteModal').classList.add('hidden'); }
 
     async function saveNote() {
-        const content = document.getElementById('noteInput').value.trim();
-        if (!content) return closeModal();
-
-        const newNote = {
-            id: Date.now().toString(),
-            content: content,
-            date: new Date().toISOString(),
-            color: selectedColor
-        };
-
-        notes.unshift(newNote);
+        const c = document.getElementById('noteInput').value.trim();
+        if(!c) return closeModal();
+        notes.unshift({ id: Date.now().toString(), content: c, date: new Date().toISOString(), color: selectedColor });
         await DataModule.save(notes, Session.get().encryptionKey);
-        renderNotes();
-        closeModal();
+        renderNotes(); closeModal();
     }
 
     async function deleteNote(id) {
-        if(confirm('Delete this note?')) {
+        if(confirm('Delete note?')) {
             notes = notes.filter(n => n.id !== id);
             await DataModule.save(notes, Session.get().encryptionKey);
             renderNotes();
         }
     }
-
-    // Import / Export
-    async function exportData() {
-        const d = { app: 'HazeNote', version: '3.0', notes };
-        const a = document.createElement('a');
-        a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(d, null, 2));
-        a.download = `HazeNote_Backup_${new Date().toISOString().slice(0,10)}.json`;
-        a.click();
+    
+    function copyText(txt) {
+        navigator.clipboard.writeText(txt);
+        // Simple feedback
+        const badge = document.getElementById('noteCountBadge');
+        const orig = badge.innerText;
+        badge.innerText = '✓';
+        setTimeout(() => badge.innerText = orig, 1000);
     }
 
-    function triggerImport() { document.getElementById('fileInput').click(); }
-    
-    async function importData(input) {
-        const f = input.files[0]; if (!f) return;
+    // Import/Export
+    async function exportData() {
+        const d = { app: 'HazeNote', version: '3.1', notes };
+        const a = document.createElement('a');
+        a.href = 'data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(d));
+        a.download = `HazeNote_${Date.now()}.json`; a.click();
+    }
+    function triggerImport(){ document.getElementById('fileInput').click(); }
+    async function importData(input){
+        const f = input.files[0]; if(!f)return;
         const r = new FileReader();
-        r.onload = async e => {
-            try {
-                const d = JSON.parse(e.target.result);
-                if (d.app === 'HazeNote') {
-                    // Merge and dedup
-                    const currentIds = new Set(notes.map(n => n.id));
-                    const newNotes = d.notes.filter(n => !currentIds.has(n.id));
-                    notes = [...newNotes, ...notes];
+        r.onload=async e=>{
+            try{
+                const d=JSON.parse(e.target.result);
+                if(d.app==='HazeNote'){
+                    notes=[...d.notes,...notes];
+                    // dedup based on id
+                    notes = Array.from(new Map(notes.map(item => [item['id'], item])).values());
                     await DataModule.save(notes, Session.get().encryptionKey);
-                    renderNotes();
-                    alert(`Imported ${newNotes.length} notes.`);
+                    renderNotes(); alert('Imported.');
                 }
-            } catch { alert('Invalid backup file.'); }
-        };
-        r.readAsText(f);
+            }catch{alert('Error');}
+        }; r.readAsText(f);
     }
     </script>
 </body>
