@@ -1,1 +1,1 @@
-Ai Coding for my APP
+Coding My APP with My Ai
