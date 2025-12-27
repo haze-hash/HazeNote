@@ -3,360 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HazeNote V2</title>
+    <title>HazeNote V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        dark: '#0a0a0a',
+                        dark: '#0a0a0a', // 截图中的深邃黑背景
                         card: '#1a1a1a',
-                        purple: '#7B61FF',
-                        orange: '#FF6B4A',
-                        yellow: '#D4A853',
+                        purple: '#7B61FF', // 截图中的电光紫
+                        orange: '#FF6B4A', // 截图中的珊瑚橙
+                        yellow: '#D4A853', // 截图中的金色
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'sans-serif'],
+                        serif: ['"Noto Serif SC"', 'Georgia', 'serif'], // 用于大标题
                     }
                 }
             }
         }
     </script>
+
     <style>
         * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { 
             background-color: #0a0a0a; 
             color: white; 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+            font-family: 'Inter', sans-serif;
             overscroll-behavior: none; 
         }
-        .font-serif { font-family: 'Noto Serif SC', 'Georgia', 'Songti SC', serif; }
+        
+        /* 隐藏滚动条 */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 有机形状 - Apple风格的柔和形态 */
+        /* === 核心视觉元素：有机流体形状 (Blobs) === */
+        /* 通过 border-radius 模拟截图中的不规则色块 */
         .blob-purple {
             background: linear-gradient(135deg, #8B71FF 0%, #7B61FF 50%, #6B51EF 100%);
             border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
-            filter: blur(0.5px);
+            filter: blur(40px); /* 背景模糊 */
+            opacity: 0.6;
         }
-        .blob-orange {
-            background: linear-gradient(135deg, #FF8B6A 0%, #FF6B4A 50%, #F55A3A 100%);
-            border-radius: 37% 63% 46% 54% / 48% 55% 45% 52%;
-            filter: blur(0.5px);
-        }
-        .blob-yellow {
-            background: linear-gradient(135deg, #E4B863 0%, #D4A853 50%, #C49843 100%);
-            border-radius: 54% 46% 63% 37% / 52% 45% 55% 48%;
-            filter: blur(0.5px);
+        .blob-shape-card {
+            border-radius: 63% 37% 54% 46% / 55% 48% 52% 45%;
         }
         
-        /* 四角星 */
-        .star-4 {
-            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-        }
-        
-        /* 便签卡片 - 精致阴影 */
-        .note-card {
-            position: relative;
-            border-radius: 20px;
-            overflow: hidden;
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .note-card:active { transform: scale(0.98); }
-        
-        /* 颜色标记 - 更柔和的渐变 */
-        .tagged-purple { 
-            background: linear-gradient(145deg, #8B71FF 0%, #7B61FF 40%, #6B51EF 100%);
-            box-shadow: 0 4px 20px rgba(123, 97, 255, 0.25);
-        }
-        .tagged-orange { 
-            background: linear-gradient(145deg, #FF8B6A 0%, #FF6B4A 40%, #F55A3A 100%);
-            box-shadow: 0 4px 20px rgba(255, 107, 74, 0.25);
-        }
-        .tagged-yellow { 
-            background: linear-gradient(145deg, #E4B863 0%, #D4A853 40%, #C49843 100%);
-            box-shadow: 0 4px 20px rgba(212, 168, 83, 0.25);
-        }
-        .tagged-none { 
-            background: linear-gradient(145deg, #1a1a1a 0%, #151515 100%);
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        
-        /* 滑动动作 */
-        .swipe-actions {
-            position: absolute; top: 0; right: 0; bottom: 0; width: 140px;
-            display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-right: 12px;
-            background: linear-gradient(90deg, transparent 0%, #0a0a0a 30%);
-        }
-        .card-inner {
-            position: relative; z-index: 2;
-            transform: translateX(0); 
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            will-change: transform;
-        }
-        .note-card.swiped .card-inner { transform: translateX(-140px); }
-        
-        /* Passkey 按钮 - Robinhood风格渐变 */
-        .passkey-btn {
-            background: linear-gradient(135deg, #8B71FF 0%, #9B71FF 25%, #C07BFF 50%, #FF8B7A 75%, #FF7B6A 100%);
-            background-size: 200% 200%;
-            animation: gradientShift 8s ease infinite;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 
-                0 4px 15px rgba(123, 97, 255, 0.3),
-                0 1px 3px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        .passkey-btn:hover { 
-            transform: translateY(-2px) scale(1.01); 
-            box-shadow: 
-                0 8px 25px rgba(123, 97, 255, 0.4),
-                0 2px 6px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        }
-        .passkey-btn:active { 
-            transform: translateY(0) scale(0.99);
-            box-shadow: 
-                0 2px 10px rgba(123, 97, 255, 0.3),
-                0 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* 星星闪烁 - 更自然的动画 */
-        .sparkle { 
-            animation: sparkle 4s ease-in-out infinite;
-            filter: drop-shadow(0 0 2px currentColor);
-        }
-        @keyframes sparkle { 
-            0%, 100% { opacity: 0.2; transform: scale(0.8) rotate(0deg); } 
-            50% { opacity: 0.9; transform: scale(1.1) rotate(20deg); } 
-        }
-        
-        /* 浮动动画 - Apple风格流畅 */
+        /* 浮动动画 */
         .float { animation: float 10s ease-in-out infinite; }
         @keyframes float { 
             0%, 100% { transform: translateY(0) rotate(0deg) scale(1); } 
-            33% { transform: translateY(-12px) rotate(2deg) scale(1.02); }
-            66% { transform: translateY(-6px) rotate(-1deg) scale(0.99); }
+            50% { transform: translateY(-20px) rotate(5deg) scale(1.05); }
         }
-        
-        /* 加号按钮 */
-        .add-btn {
-            background: linear-gradient(135deg, #7B61FF 0%, #9B61FF 50%, #FF6B4A 100%);
-            box-shadow: 
-                0 4px 15px rgba(123, 97, 255, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* === 卡片风格 === */
+        .note-card {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
-        .add-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(123, 97, 255, 0.5);
+        .note-card:active { transform: scale(0.98); }
+
+        /* 风格1：深色带流体 (类似截图 Task today) */
+        .card-style-dark {
+            background-color: #1a1a1a;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        .add-btn:active {
-            transform: scale(0.95);
+        /* 风格2：亮色排版 (类似截图 UI Trend) */
+        .card-style-light {
+            background-color: #f5f5f5;
+            color: #0a0a0a;
         }
-        
-        /* 玻璃态效果 */
-        .glass {
-            background: rgba(26, 26, 26, 0.8);
+        /* 风格3：橙色大字 (类似截图 Year End Party) */
+        .card-style-orange {
+            background: linear-gradient(135deg, #FF8B6A 0%, #FF6B4A 100%);
+            color: #0a0a0a;
+        }
+
+        /* 装饰用的流体 */
+        .card-blob {
+            position: absolute;
+            top: -20px; right: -20px;
+            width: 100px; height: 100px;
+            background: #7B61FF;
+            border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+            z-index: 0;
+        }
+
+        /* 底部导航栏玻璃态 */
+        .glass-nav {
+            background: rgba(10, 10, 10, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
+
+        /* 按钮光晕 */
+        .glow-shadow {
+            box-shadow: 0 0 20px rgba(123, 97, 255, 0.3);
+        }
+
+        /* 字体类 */
+        .font-display { font-family: 'Noto Serif SC', serif; }
         
-        /* 输入框聚焦效果 */
-        textarea:focus {
-            box-shadow: 
-                0 0 0 2px rgba(123, 97, 255, 0.2),
-                0 4px 20px rgba(123, 97, 255, 0.1);
-        }
-        
-        /* 图标容器悬浮效果 */
-        .icon-box {
-            transition: all 0.2s ease;
-        }
-        .icon-box:hover {
-            transform: scale(1.05);
-        }
+        /* 输入框聚焦 */
+        textarea:focus { outline: none; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen overflow-hidden">
-    <!-- ========== 登录界面 ========== -->
-    <div id="loginScreen" class="w-full max-w-md min-h-screen flex flex-col items-center justify-center bg-dark px-8 relative overflow-hidden">
-        <!-- 装饰图形 - 右上角大块（层叠效果） -->
-        <div class="absolute -top-16 -right-16 w-72 h-72 blob-purple float" style="z-index: 1;"></div>
-        <div class="absolute top-12 right-0 w-36 h-36 blob-orange float" style="animation-delay: -2s; z-index: 2;"></div>
+<body class="flex justify-center min-h-screen overflow-hidden bg-dark">
+
+    <div class="fixed top-[-10%] right-[-20%] w-[300px] h-[300px] blob-purple float pointer-events-none z-0"></div>
+    <div class="fixed bottom-[10%] left-[-10%] w-[250px] h-[250px] blob-purple float pointer-events-none z-0" style="background: #FF6B4A; animation-delay: -5s;"></div>
+
+    <div id="loginScreen" class="w-full max-w-md h-full flex flex-col items-center justify-center px-8 relative z-50 bg-dark/95 backdrop-blur-xl">
+        <h1 class="text-6xl font-display font-bold text-white mb-2 tracking-tight">Haze<br/><span class="text-purple">Note.</span></h1>
+        <p class="text-gray-400 text-sm mb-12 tracking-wide font-serif italic">Capture your thoughts in style.</p>
         
-        <!-- 左下角装饰 -->
-        <div class="absolute -bottom-16 -left-16 w-48 h-48 blob-yellow opacity-95 float" style="animation-delay: -4s;"></div>
-        
-        <!-- 四角星装饰 - 精致分布 -->
-        <div class="absolute top-52 left-10 w-5 h-5 bg-yellow star-4 sparkle"></div>
-        <div class="absolute bottom-36 right-24 w-4 h-4 bg-purple star-4 sparkle" style="animation-delay: -2s;"></div>
-        <div class="absolute top-24 left-24 w-3 h-3 bg-purple/40 star-4 sparkle" style="animation-delay: -3s;"></div>
-        <div class="absolute bottom-48 right-8 w-3 h-3 bg-orange/50 star-4 sparkle" style="animation-delay: -1s;"></div>
-        
-        <!-- 标题 -->
-        <div class="text-center mb-12 z-10">
-            <h1 class="text-[52px] font-bold text-white mb-5 tracking-tight leading-[1.1]" style="font-family: 'Inter', -apple-system, sans-serif; letter-spacing: -0.02em;">
-                Haze<br/>Note
-            </h1>
-            <p class="text-gray-500 text-[15px] tracking-wide" style="letter-spacing: 0.05em;">安全加密 · 本地存储</p>
-        </div>
-        
-        <!-- Passkey 按钮 -->
-        <div class="w-full z-10">
-            <button id="passkeyBtn" onclick="handlePasskey()" class="passkey-btn w-full py-5 rounded-2xl text-white font-semibold text-base flex items-center justify-center gap-3">
-                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>
-                    <path d="M5 19.5C5.5 18 6 15 6 12c0-.7.12-1.37.34-2"/>
-                    <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
-                    <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
-                    <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
-                    <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
-                    <path d="M2 16h.01"/>
-                    <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
-                    <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"/>
-                </svg>
-                <span id="passkeyBtnText">创建 Passkey</span>
-            </button>
-        </div>
-        
-        <!-- 底部说明 - 精致图标盒子 -->
-        <div class="mt-12 z-10 flex items-center justify-center gap-10">
-            <div class="flex items-center gap-3">
-                <div class="icon-box w-9 h-9 rounded-xl bg-gradient-to-br from-purple/20 to-purple/10 flex items-center justify-center border border-purple/20 shadow-lg shadow-purple/10">
-                    <svg class="w-[18px] h-[18px] text-purple" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                    </svg>
-                </div>
-                <span class="text-gray-400 text-[13px] font-medium">端到端加密</span>
-            </div>
-            <div class="flex items-center gap-3">
-                <div class="icon-box w-9 h-9 rounded-xl bg-gradient-to-br from-orange/20 to-orange/10 flex items-center justify-center border border-orange/20 shadow-lg shadow-orange/10">
-                    <svg class="w-[18px] h-[18px] text-orange" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
-                    </svg>
-                </div>
-                <span class="text-gray-400 text-[13px] font-medium">生物识别</span>
-            </div>
-        </div>
-        
-        <div id="loginError" class="hidden mt-4 text-red-400 text-sm text-center z-10"></div>
+        <button id="passkeyBtn" onclick="handlePasskey()" class="w-full py-4 rounded-full bg-white text-dark font-bold text-lg shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:scale-105 transition-transform flex items-center justify-center gap-2">
+            <i class="fa-solid fa-fingerprint text-xl"></i>
+            <span id="passkeyBtnText">Unlock with FaceID</span>
+        </button>
+        <div id="loginError" class="mt-4 text-orange text-sm hidden"></div>
     </div>
 
-    <!-- ========== 主应用界面 ========== -->
-    <div id="mainApp" class="w-full max-w-md min-h-screen flex flex-col bg-dark hidden relative">
-        <!-- 顶部装饰 -->
-        <div class="absolute -top-8 -right-8 w-36 h-36 blob-purple opacity-50 float"></div>
-        <div class="absolute top-10 right-2 w-16 h-16 blob-orange opacity-60 float" style="animation-delay: -2s;"></div>
+    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col hidden relative z-10">
         
-        <!-- Header -->
-        <header class="relative z-20 px-6 pt-14 pb-4">
-            <div class="flex justify-between items-start">
-                <div>
-                    <p class="text-gray-500 text-sm mb-1" id="headerDate">Hi ✦</p>
-                    <h1 class="text-4xl font-bold text-white tracking-tight leading-tight">My<br/>Notes</h1>
+        <header class="px-6 pt-14 pb-4 flex justify-between items-end z-20">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Brian" class="w-6 h-6 rounded-full bg-gray-800" alt="Avatar">
+                    <span class="text-xs text-gray-400">Hi, Traveler</span>
                 </div>
-                <div class="flex items-center gap-3">
-                    <button onclick="lockApp()" class="w-11 h-11 rounded-full bg-card flex items-center justify-center border border-white/10 hover:bg-white/5 transition">
-                        <i class="fa-solid fa-lock text-white/70 text-sm"></i>
-                    </button>
-                    <div class="bg-card rounded-full pl-3 pr-4 py-2.5 flex items-center gap-2 border border-white/10">
-                        <i class="fa-solid fa-search text-gray-600 text-xs"></i>
-                        <span id="statCount" class="text-white font-bold">0</span>
-                    </div>
-                </div>
+                <h1 class="text-5xl font-display font-light text-white leading-none">My<br/><span class="font-bold">Notes</span></h1>
             </div>
             
-            <!-- 统计卡片 -->
-            <div class="flex gap-3 mt-6">
-                <div class="flex-1 bg-purple/10 rounded-2xl p-4 border border-purple/20">
-                    <p class="text-purple text-xl font-bold" id="statChars">0</p>
-                    <p class="text-gray-500 text-xs mt-1">总字数</p>
-                </div>
-                <div class="flex-1 bg-orange/10 rounded-2xl p-4 border border-orange/20">
-                    <p class="text-orange text-xl font-bold" id="statDays">0</p>
-                    <p class="text-gray-500 text-xs mt-1">天数</p>
-                </div>
-                <div class="flex-1 bg-yellow/10 rounded-2xl p-4 border border-yellow/20">
-                    <p class="text-yellow text-xl font-bold" id="statWeather">--</p>
-                    <p class="text-gray-500 text-xs mt-1">天气</p>
-                </div>
+            <div class="bg-[#1a1a1a] border border-white/10 rounded-full p-1 pl-4 flex items-center gap-3 h-12">
+                <i class="fa-solid fa-magnifying-glass text-gray-400 text-sm"></i>
+                <div class="bg-white text-dark font-bold rounded-full w-9 h-9 flex items-center justify-center text-sm" id="noteCountBadge">0</div>
             </div>
         </header>
 
-        <!-- 便签列表 -->
-        <main id="noteList" class="flex-1 overflow-y-auto px-6 pb-32 no-scrollbar relative z-10"></main>
+        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 space-y-4 no-scrollbar pt-2">
+            </main>
 
-        <!-- 底部工具栏 -->
-        <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-gradient-to-t from-dark via-dark to-transparent pt-10 pb-8 px-6 z-30">
-            <div class="bg-card/80 backdrop-blur-xl rounded-2xl p-1.5 flex justify-between items-center border border-white/10">
-                <button onclick="triggerImport()" class="flex-1 py-3.5 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 transition flex items-center justify-center">
-                    <i class="fa-solid fa-file-import text-sm"></i>
+        <div class="fixed bottom-8 left-0 right-0 flex justify-center z-50 pointer-events-none">
+            <div class="pointer-events-auto bg-[#0a0a0a] border border-white/10 shadow-2xl rounded-[30px] px-2 py-2 flex items-center gap-2">
+                <button onclick="exportData()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fa-solid fa-file-export"></i>
                 </button>
-                <button onclick="exportData()" class="flex-1 py-3.5 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 transition flex items-center justify-center">
-                    <i class="fa-solid fa-file-export text-sm"></i>
+                
+                <button onclick="triggerImport()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fa-solid fa-file-import"></i>
                 </button>
-                <button onclick="openNewNoteModal()" class="w-14 h-14 rounded-xl add-btn text-white flex items-center justify-center -my-1">
+
+                <button onclick="lockApp()" class="w-12 h-12 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                    <i class="fa-solid fa-lock"></i>
+                </button>
+
+                <button onclick="openNewNoteModal()" class="w-16 h-12 rounded-[24px] bg-white text-black flex items-center justify-center ml-2 hover:scale-105 transition shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                     <i class="fa-solid fa-plus text-lg"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ========== 新建便签弹窗 ========== -->
-    <div id="noteModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex items-end justify-center">
-        <div class="bg-card w-full max-w-md rounded-t-[28px] p-6 pb-10 relative overflow-hidden">
-            <!-- 装饰 -->
-            <div class="absolute -top-16 right-6 w-20 h-20 blob-purple opacity-30"></div>
-            <div class="absolute -top-8 right-20 w-12 h-12 blob-orange opacity-40"></div>
-            
-            <div class="flex justify-between items-center mb-5 relative z-10">
-                <button onclick="closeModal()" class="text-gray-500 hover:text-white transition">取消</button>
-                <div class="w-10 h-1 bg-gray-700 rounded-full"></div>
-                <button onclick="saveNote()" class="text-purple font-semibold">保存</button>
-            </div>
-            
-            <div class="relative z-10">
-                <textarea id="noteInput" 
-                    class="w-full h-44 bg-dark/50 rounded-2xl p-4 text-white text-base resize-none focus:outline-none focus:ring-2 focus:ring-purple/30 placeholder-gray-600 font-serif leading-relaxed" 
-                    placeholder="写点什么..."
-                    maxlength="1000"></textarea>
-                <div class="flex justify-between items-center mt-3 px-1">
-                    <span class="text-gray-600 text-xs" id="modalWeather"></span>
-                    <span class="text-gray-600 text-xs" id="charCount">0/1000</span>
+    <div id="noteModal" class="fixed inset-0 bg-dark z-[60] hidden flex flex-col">
+        <div class="px-6 pt-14 pb-4 flex justify-between items-center">
+            <button onclick="closeModal()" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-white">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="flex gap-2">
+                <div class="text-xs text-gray-400 border border-white/10 px-3 py-1 rounded-full flex items-center gap-2">
+                    <span id="modalDate">Today</span>
                 </div>
             </div>
-            
-            <!-- 颜色选择 -->
-            <div class="flex gap-2 mt-5 relative z-10">
-                <button onclick="selectColor('none')" class="color-btn flex-1 py-2.5 rounded-xl bg-dark border border-white/10 text-gray-500 text-xs">无</button>
-                <button onclick="selectColor('purple')" class="color-btn flex-1 py-2.5 rounded-xl bg-purple text-white text-xs">💜 紫</button>
-                <button onclick="selectColor('orange')" class="color-btn flex-1 py-2.5 rounded-xl bg-orange text-white text-xs">🧡 橙</button>
-                <button onclick="selectColor('yellow')" class="color-btn flex-1 py-2.5 rounded-xl bg-yellow text-dark text-xs font-medium">💛 黄</button>
-            </div>
+            <button onclick="saveNote()" class="w-10 h-10 rounded-full bg-purple text-white flex items-center justify-center glow-shadow">
+                <i class="fa-solid fa-check"></i>
+            </button>
         </div>
-    </div>
 
-    <!-- ========== 分享预览 ========== -->
-    <div id="sharePreviewOverlay" class="fixed inset-0 bg-black/95 z-[60] hidden flex flex-col items-center justify-center p-4">
-        <canvas id="shareCanvas" width="1600" height="838" style="width: 90%; max-width: 400px; border-radius: 20px;"></canvas>
-        <div id="shareData" style="display:none;"><span id="shareText"></span><span id="shareFooterInfo"></span><span id="shareWeatherSmall"></span><span id="shareAccentColor">#7B61FF</span></div>
-        <div class="flex gap-3 mt-8">
-            <button onclick="closeShare()" class="px-5 py-3 rounded-xl bg-card text-white text-sm border border-white/10">关闭</button>
-            <button onclick="downloadImage()" class="px-5 py-3 rounded-xl bg-white/5 text-white text-sm border border-white/10"><i class="fa-solid fa-download mr-2"></i>保存</button>
-            <button onclick="shareNative()" class="px-5 py-3 rounded-xl add-btn text-white text-sm font-medium"><i class="fa-solid fa-share mr-2"></i>分享</button>
+        <div class="flex-1 px-6 pt-4">
+            <textarea id="noteInput" class="w-full h-full bg-transparent text-white text-xl leading-relaxed font-serif placeholder-gray-600 resize-none" placeholder="Start typing your thoughts..."></textarea>
+        </div>
+
+        <div class="px-6 pb-10 pt-4">
+            <div class="flex justify-between items-center bg-[#1a1a1a] p-2 rounded-2xl border border-white/5">
+                <div class="flex gap-2" id="colorPickerContainer">
+                    <button onclick="selectColor('dark')" class="w-8 h-8 rounded-full bg-[#1a1a1a] border border-white/20 ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a] color-btn"></button>
+                    <button onclick="selectColor('light')" class="w-8 h-8 rounded-full bg-[#f5f5f5] color-btn"></button>
+                    <button onclick="selectColor('orange')" class="w-8 h-8 rounded-full bg-[#FF6B4A] color-btn"></button>
+                    <button onclick="selectColor('purple')" class="w-8 h-8 rounded-full bg-[#7B61FF] color-btn"></button>
+                </div>
+                <span class="text-xs text-gray-500 font-mono" id="charCount">0/1000</span>
+            </div>
         </div>
     </div>
 
     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
 
     <script>
-    // ========== Passkey 模块 ==========
+    /* 保留 V2 的核心逻辑 (Passkey, 加密, 存储)
+       重写 UI 渲染逻辑 (renderNotes) 以适配新设计
+    */
+
+    // ========== Passkey & Crypto Modules (保持不变) ==========
     const PasskeyModule = {
         CREDENTIAL_KEY: 'hazenote_passkey_credential',
         ENCRYPTION_KEY_STORAGE: 'hazenote_passkey_encryption_key',
@@ -381,7 +236,7 @@
             const encryptionKey = this.bufferToBase64URL(crypto.getRandomValues(new Uint8Array(32)));
             const options = {
                 challenge, rp: { name: 'HazeNote', id: location.hostname || 'localhost' },
-                user: { id: userId, name: 'HazeNote User', displayName: 'HazeNote 用户' },
+                user: { id: userId, name: 'HazeNote User', displayName: 'HazeNote User' },
                 pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
                 authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
                 timeout: 60000, attestation: 'none'
@@ -402,11 +257,9 @@
             };
             await navigator.credentials.get({ publicKey: options });
             return localStorage.getItem(this.ENCRYPTION_KEY_STORAGE);
-        },
-        reset() { localStorage.removeItem(this.CREDENTIAL_KEY); localStorage.removeItem(this.ENCRYPTION_KEY_STORAGE); }
+        }
     };
 
-    // ========== 加密模块 ==========
     const CryptoModule = {
         async importKey(keyString) {
             const keyData = new TextEncoder().encode(keyString.padEnd(32, '0').substring(0, 32));
@@ -430,7 +283,6 @@
         }
     };
 
-    // ========== 数据模块 ==========
     const DataModule = {
         NOTES_KEY: 'hazenote_encrypted_data',
         async save(notes, key) { localStorage.setItem(this.NOTES_KEY, await CryptoModule.encrypt(notes, key)); },
@@ -444,166 +296,214 @@
         clear() { sessionStorage.removeItem(this.KEY); }
     };
 
-    // ========== 应用状态 ==========
+    // ========== App Logic ==========
     let notes = [];
-    let currentWeather = '';
-    let selectedColor = 'none';
+    let selectedColor = 'dark'; // dark, light, orange, purple
 
+    // 初始化
     window.onload = async () => {
-        if (!PasskeyModule.isSupported()) { showError('浏览器不支持 Passkey'); document.getElementById('passkeyBtn').disabled = true; return; }
-        updateBtn();
-        const s = Session.get(); if (s) await initApp(s.encryptionKey);
+        if (!PasskeyModule.isSupported()) { 
+            alert('Your browser does not support Passkey.'); 
+            document.getElementById('passkeyBtn').style.display = 'none';
+        }
+        updateLoginBtn();
+        const s = Session.get(); 
+        if (s) await initApp(s.encryptionKey);
+        
+        // 字数统计监听
+        document.getElementById('noteInput').addEventListener('input', e => {
+            document.getElementById('charCount').textContent = e.target.value.length + '/1000';
+        });
     };
 
-    function updateBtn() { document.getElementById('passkeyBtnText').textContent = PasskeyModule.hasCredential() ? '使用 Passkey 解锁' : '创建 Passkey'; }
-    function showError(msg) { const e = document.getElementById('loginError'); e.textContent = msg; e.classList.remove('hidden'); setTimeout(() => e.classList.add('hidden'), 5000); }
+    function updateLoginBtn() {
+        const has = PasskeyModule.hasCredential();
+        document.getElementById('passkeyBtnText').textContent = has ? 'Unlock with FaceID' : 'Create Secure Passkey';
+    }
 
     async function handlePasskey() {
-        const btn = document.getElementById('passkeyBtn'), txt = document.getElementById('passkeyBtnText');
-        btn.disabled = true; const orig = txt.textContent; txt.textContent = '验证中...';
         try {
             const key = PasskeyModule.hasCredential() ? await PasskeyModule.authenticate() : await PasskeyModule.register();
             Session.set(key); await initApp(key);
         } catch (e) {
-            if (e.message === 'NO_CREDENTIAL') { PasskeyModule.reset(); updateBtn(); showError('Passkey 已失效，请重新创建'); }
-            else showError(e.message || '认证失败');
-        } finally { btn.disabled = false; txt.textContent = orig; updateBtn(); }
+            if (e.message === 'NO_CREDENTIAL') { 
+                alert('Passkey invalid. Please re-create.'); 
+                localStorage.removeItem(PasskeyModule.CREDENTIAL_KEY);
+                updateLoginBtn();
+            } else {
+                alert('Authentication failed.');
+            }
+        }
     }
 
     async function initApp(key) {
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         notes = await DataModule.load(key);
-        mockWeather(); renderNotes();
-        document.getElementById('noteInput').addEventListener('input', e => {
-            document.getElementById('charCount').textContent = e.target.value.length + '/1000';
-        });
+        renderNotes();
     }
 
-    function lockApp() { Session.clear(); notes = []; document.getElementById('mainApp').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); updateBtn(); }
-
-    function mockWeather() {
-        const temps = ['18°', '22°', '25°', '28°'];
-        const temp = temps[Math.floor(Math.random() * temps.length)];
-        currentWeather = new Date().toLocaleDateString() + ' | ' + temp;
-        document.getElementById('headerDate').textContent = new Date().toLocaleDateString('zh-CN', { weekday: 'long' }) + ' ✦';
-        document.getElementById('statWeather').textContent = temp;
-        document.getElementById('modalWeather').textContent = currentWeather;
+    function lockApp() {
+        Session.clear();
+        notes = [];
+        document.getElementById('mainApp').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
     }
 
-    function updateStats() {
-        document.getElementById('statCount').textContent = notes.length;
-        document.getElementById('statChars').textContent = notes.reduce((s, n) => s + (n.content?.length || 0), 0);
-        if (notes.length) {
-            const min = Math.min(...notes.map(n => new Date(n.date).getTime()));
-            document.getElementById('statDays').textContent = Math.max(1, Math.ceil((Date.now() - min) / 86400000));
-        } else document.getElementById('statDays').textContent = 0;
-    }
-
+    // ========== 渲染逻辑 (UI的核心部分) ==========
     function renderNotes() {
-        const list = document.getElementById('noteList'); list.innerHTML = ''; updateStats();
-        if (!notes.length) {
+        const list = document.getElementById('noteList');
+        list.innerHTML = '';
+        document.getElementById('noteCountBadge').textContent = notes.length;
+
+        if (notes.length === 0) {
             list.innerHTML = `
-                <div class="text-center mt-16">
-                    <div class="w-16 h-16 mx-auto blob-purple opacity-20 mb-6"></div>
-                    <p class="text-gray-600 text-base">还没有便签</p>
-                    <p class="text-gray-700 text-sm mt-2">点击 + 开始记录 ✦</p>
-                </div>`;
+                <div class="mt-20 flex flex-col items-center opacity-30">
+                    <div class="w-24 h-24 blob-purple mb-4 rounded-full"></div>
+                    <p class="font-serif italic text-lg">No notes yet.</p>
+                </div>
+            `;
             return;
         }
-        const order = { purple: 3, orange: 2, yellow: 1, none: 0 };
-        [...notes].sort((a, b) => (order[b.color || 'none'] - order[a.color || 'none']) || new Date(b.date) - new Date(a.date)).forEach(n => {
+
+        // 排序：最新的在最前
+        notes.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        notes.forEach(note => {
             const el = document.createElement('div');
-            const bgClass = n.color && n.color !== 'none' ? 'tagged-' + n.color : 'tagged-none';
-            const textClass = n.color === 'yellow' ? 'text-dark' : 'text-white';
-            el.className = 'note-card relative w-full mb-3 ' + bgClass;
+            
+            // 根据颜色选择样式类
+            let styleClass = 'card-style-dark';
+            let blobEl = ''; // 只有 dark 模式加装饰斑点
+            let textColor = 'text-white';
+            let metaColor = 'text-gray-400';
+            let deleteBtnColor = 'text-gray-500 hover:text-white';
+            
+            if (note.color === 'light') {
+                styleClass = 'card-style-light';
+                textColor = 'text-black';
+                metaColor = 'text-gray-500';
+                deleteBtnColor = 'text-gray-400 hover:text-red-500';
+            } else if (note.color === 'orange') {
+                styleClass = 'card-style-orange';
+                textColor = 'text-black';
+                metaColor = 'text-gray-800';
+                deleteBtnColor = 'text-black/50 hover:text-black';
+            } else if (note.color === 'purple') {
+                styleClass = 'bg-[#7B61FF] text-white'; // Purple solid
+                textColor = 'text-white';
+                metaColor = 'text-white/70';
+                deleteBtnColor = 'text-white/60 hover:text-white';
+            } else {
+                // Dark (Default) - add blob decoration
+                blobEl = `<div class="card-blob opacity-20"></div>`;
+                // Random organic shape for dark cards to match screenshot variety
+                const shapes = ['rounded-[30px]', 'rounded-[30px_30px_30px_0]', 'rounded-[30px_30px_0_30px]'];
+                // el.className += ' ' + shapes[Math.floor(Math.random()*shapes.length)]; 
+            }
+
+            el.className = `note-card w-full p-6 rounded-[32px] mb-4 flex flex-col justify-between min-h-[160px] cursor-pointer group ${styleClass}`;
+            
+            // Format Date
+            const d = new Date(note.date);
+            const dateStr = `${d.getDate()}th ${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+
+            // 根据截图：如果是 Orange，用大字体展示；如果是 Light/Dark，用标准排版
+            let contentHtml = '';
+            if (note.color === 'orange') {
+                contentHtml = `<p class="text-4xl font-display font-bold leading-tight line-clamp-3 mb-4">${note.content}</p>`;
+            } else {
+                contentHtml = `
+                    <h3 class="font-display text-2xl font-bold mb-2">Note</h3>
+                    <p class="text-base leading-relaxed opacity-90 line-clamp-3 font-sans">${note.content}</p>
+                `;
+            }
+
             el.innerHTML = `
-                <div class="swipe-actions">
-                    <button onclick="event.stopPropagation();setColor('${n.id}','purple')" class="w-9 h-9 rounded-lg bg-purple flex items-center justify-center"><span class="text-sm">💜</span></button>
-                    <button onclick="event.stopPropagation();setColor('${n.id}','orange')" class="w-9 h-9 rounded-lg bg-orange flex items-center justify-center"><span class="text-sm">🧡</span></button>
-                    <button onclick="event.stopPropagation();setColor('${n.id}','yellow')" class="w-9 h-9 rounded-lg bg-yellow flex items-center justify-center"><span class="text-sm">💛</span></button>
+                ${blobEl}
+                <div class="relative z-10 flex-1">
+                    ${contentHtml}
                 </div>
-                <div class="card-inner p-4 rounded-[20px]" id="card-${n.id}">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="text-[11px] opacity-50">${n.weather?.split('|')[0]?.trim() || ''}</span>
-                        <button onclick="event.stopPropagation();toggleSwipe('${n.id}')" class="opacity-40 hover:opacity-100 p-1 -mr-1"><i class="fa-solid fa-ellipsis text-xs"></i></button>
-                    </div>
-                    <p class="${textClass} text-[15px] leading-relaxed line-clamp-4 font-serif">${n.content}</p>
-                    <div class="mt-3 pt-2 border-t border-white/10 flex justify-between items-center">
-                        <span class="text-[11px] opacity-30">${n.weather?.split('|')[1]?.trim() || ''}</span>
-                        <div class="flex gap-4">
-                            <button onclick="event.stopPropagation();deleteNote('${n.id}')" class="opacity-30 hover:opacity-100 transition"><i class="fa-solid fa-trash text-xs"></i></button>
-                            <button onclick="event.stopPropagation();prepareShare('${n.id}')" class="opacity-30 hover:opacity-100 transition"><i class="fa-solid fa-share text-xs"></i></button>
-                        </div>
-                    </div>
-                </div>`;
-            const inner = el.querySelector('.card-inner');
-            inner.addEventListener('touchstart', e => { el._sx = e.touches[0].clientX; el._sy = e.touches[0].clientY; }, { passive: true });
-            inner.addEventListener('touchend', e => {
-                const dx = el._sx - e.changedTouches[0].clientX;
-                const dy = Math.abs(el._sy - e.changedTouches[0].clientY);
-                if (Math.abs(dx) > 50 && dy < 30) {
-                    document.querySelectorAll('.note-card.swiped').forEach(c => c !== el && c.classList.remove('swiped'));
-                    el.classList.toggle('swiped', dx > 0);
-                }
-            }, { passive: true });
+                <div class="relative z-10 flex justify-between items-end mt-4">
+                    <span class="text-xs font-bold uppercase tracking-wider ${metaColor}">${dateStr}</span>
+                    <button onclick="event.stopPropagation(); deleteNote('${note.id}')" class="${deleteBtnColor} transition p-2 -mr-2">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            
+            // 点击查看/复制逻辑 (简化为复制)
+            el.onclick = () => {
+                navigator.clipboard.writeText(note.content).then(() => alert('Copied to clipboard!'));
+            };
+
             list.appendChild(el);
         });
     }
 
-    function toggleSwipe(id) {
-        const el = document.getElementById('card-' + id).parentElement;
-        document.querySelectorAll('.note-card.swiped').forEach(c => c !== el && c.classList.remove('swiped'));
-        el.classList.toggle('swiped');
-    }
-
-    async function setColor(id, color) {
-        const n = notes.find(x => x.id === id);
-        if (n) { n.color = n.color === color ? 'none' : color; await DataModule.save(notes, Session.get().encryptionKey); renderNotes(); }
-    }
-
+    // ========== 操作逻辑 ==========
     function selectColor(color) {
         selectedColor = color;
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-card'));
-        event.target.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-card');
+        // Update UI ring
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.className = btn.className.replace('ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a]', '');
+        });
+        event.target.className += ' ring-2 ring-white ring-offset-2 ring-offset-[#1a1a1a]';
     }
 
     function openNewNoteModal() {
         document.getElementById('noteInput').value = '';
         document.getElementById('charCount').textContent = '0/1000';
-        selectedColor = 'none';
-        document.querySelectorAll('.color-btn').forEach((b, i) => {
-            b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-card');
-            if (i === 0) b.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-card');
-        });
+        // Reset color to dark
+        selectColor('dark');
         document.getElementById('noteModal').classList.remove('hidden');
-        setTimeout(() => document.getElementById('noteInput').focus(), 100);
+        document.getElementById('noteInput').focus();
+        
+        // Date in modal
+        const d = new Date();
+        document.getElementById('modalDate').textContent = `${d.toLocaleString('default', { weekday: 'short' })}, ${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
     }
-    function closeModal() { document.getElementById('noteModal').classList.add('hidden'); }
+
+    function closeModal() {
+        document.getElementById('noteModal').classList.add('hidden');
+    }
 
     async function saveNote() {
-        const c = document.getElementById('noteInput').value;
-        if (!c.trim()) return;
-        notes.unshift({ id: Date.now().toString(), content: c, date: new Date().toISOString(), weather: currentWeather, color: selectedColor });
+        const content = document.getElementById('noteInput').value.trim();
+        if (!content) return closeModal();
+
+        const newNote = {
+            id: Date.now().toString(),
+            content: content,
+            date: new Date().toISOString(),
+            color: selectedColor
+        };
+
+        notes.unshift(newNote);
         await DataModule.save(notes, Session.get().encryptionKey);
-        renderNotes(); closeModal();
+        renderNotes();
+        closeModal();
     }
 
     async function deleteNote(id) {
-        if (confirm('确定删除?')) {
+        if(confirm('Delete this note?')) {
             notes = notes.filter(n => n.id !== id);
             await DataModule.save(notes, Session.get().encryptionKey);
             renderNotes();
         }
     }
 
+    // Import / Export
     async function exportData() {
-        const d = { app: 'HazeNote', version: '2.0', notes };
+        const d = { app: 'HazeNote', version: '3.0', notes };
         const a = document.createElement('a');
         a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(d, null, 2));
-        a.download = 'hazenote_backup.json'; a.click();
+        a.download = `HazeNote_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
     }
+
     function triggerImport() { document.getElementById('fileInput').click(); }
+    
     async function importData(input) {
         const f = input.files[0]; if (!f) return;
         const r = new FileReader();
@@ -611,96 +511,17 @@
             try {
                 const d = JSON.parse(e.target.result);
                 if (d.app === 'HazeNote') {
-                    notes = [...d.notes, ...notes].filter((n, i, a) => a.findIndex(x => x.id === n.id) === i);
+                    // Merge and dedup
+                    const currentIds = new Set(notes.map(n => n.id));
+                    const newNotes = d.notes.filter(n => !currentIds.has(n.id));
+                    notes = [...newNotes, ...notes];
                     await DataModule.save(notes, Session.get().encryptionKey);
-                    renderNotes(); alert('导入成功 ✦');
+                    renderNotes();
+                    alert(`Imported ${newNotes.length} notes.`);
                 }
-            } catch { alert('导入失败'); }
+            } catch { alert('Invalid backup file.'); }
         };
         r.readAsText(f);
-    }
-
-    // ========== 分享功能 ==========
-    function prepareShare(id) {
-        const n = notes.find(x => x.id === id); if (!n) return;
-        const d = new Date(n.date);
-        document.getElementById('shareText').textContent = n.content;
-        document.getElementById('shareFooterInfo').textContent = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
-        document.getElementById('shareWeatherSmall').textContent = n.weather?.split('|')[1]?.trim() || '';
-        const colors = { purple: '#7B61FF', orange: '#FF6B4A', yellow: '#D4A853' };
-        document.getElementById('shareAccentColor').textContent = colors[n.color] || '#7B61FF';
-        drawShareCard(); document.getElementById('sharePreviewOverlay').classList.remove('hidden');
-    }
-
-    function drawShareCard() {
-        const canvas = document.getElementById('shareCanvas'), ctx = canvas.getContext('2d');
-        const W = canvas.width, H = canvas.height;
-        const content = document.getElementById('shareText').textContent;
-        const date = document.getElementById('shareFooterInfo').textContent;
-        const weather = document.getElementById('shareWeatherSmall').textContent;
-        const color = document.getElementById('shareAccentColor').textContent;
-
-        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
-
-        // 装饰
-        ctx.fillStyle = color; ctx.globalAlpha = 0.25;
-        ctx.beginPath(); ctx.ellipse(W - 80, 120, 180, 150, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#FF6B4A'; ctx.globalAlpha = 0.2;
-        ctx.beginPath(); ctx.ellipse(W - 180, 200, 90, 80, 0.3, 0, Math.PI * 2); ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.fillStyle = color; ctx.fillRect(0, 0, W, 5);
-
-        ctx.font = 'bold 44px Inter, sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText('HazeNote', 60, 100);
-
-        ctx.font = '26px Inter, sans-serif';
-        ctx.fillStyle = '#555';
-        ctx.textAlign = 'right';
-        ctx.fillText(weather, W - 60, 100);
-        ctx.textAlign = 'left';
-
-        ctx.font = '500 42px "Noto Serif SC", Georgia, serif';
-        ctx.fillStyle = '#ffffff';
-        let y = 200, lines = [], line = '';
-        for (const c of content) {
-            if (c === '\n' || ctx.measureText(line + c).width > W - 120) {
-                lines.push(line); line = c === '\n' ? '' : c;
-            } else line += c;
-        }
-        if (line) lines.push(line);
-        lines.slice(0, 6).forEach((l, i) => ctx.fillText(l, 60, y + i * 66));
-
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(60, H - 90); ctx.lineTo(W - 60, H - 90); ctx.stroke();
-        ctx.font = '22px Inter, sans-serif';
-        ctx.fillStyle = '#444';
-        ctx.fillText(date, 60, H - 45);
-
-        // 星星
-        ctx.fillStyle = color; ctx.globalAlpha = 0.5;
-        ctx.font = '24px serif';
-        ctx.fillText('✦', W - 80, H - 45);
-        ctx.globalAlpha = 1;
-    }
-
-    function closeShare() { document.getElementById('sharePreviewOverlay').classList.add('hidden'); }
-    async function downloadImage() {
-        const canvas = document.getElementById('shareCanvas');
-        const a = document.createElement('a');
-        a.href = canvas.toDataURL('image/png');
-        a.download = 'HazeNote_' + Date.now() + '.png';
-        a.click();
-    }
-    async function shareNative() {
-        try {
-            const canvas = document.getElementById('shareCanvas');
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const file = new File([blob], 'HazeNote.png', { type: 'image/png' });
-            if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'HazeNote' });
-            else await downloadImage();
-        } catch { await downloadImage(); }
     }
     </script>
 </body>
