@@ -3,328 +3,741 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Artistic Gallery</title>
+    <title>HazeNote V4.0 Aurora</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
     
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        black: '#050505',
+                        dark: '#121212',
+                        glass: 'rgba(255, 255, 255, 0.03)',
+                        teal: '#64FFDA',
+                        purple: '#BD93F9',
+                        orange: '#FFB86C',
+                        danger: '#FF5555',
+                    },
+                    fontFamily: {
+                        sans: ['Urbanist', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'glow-teal': '0 0 20px rgba(100, 255, 218, 0.15)',
+                        'glow-purple': '0 0 20px rgba(189, 147, 249, 0.15)',
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        :root {
-            --bg-color: #f4f4f4;
-            --text-color: #333;
+        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+        body { 
+            background-color: #050505; 
+            color: #E2E8F0; 
+            font-family: 'Urbanist', sans-serif;
+            overscroll-behavior: none; 
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        
+        #noteList { touch-action: pan-y; }
+        #noteInput { touch-action: auto; user-select: auto; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 动态极光背景 */
+        .aurora-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: hidden;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5;
+            animation: blob 10s infinite alternate;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
+        /* 玻璃拟态 */
+        .glass-panel {
+            background: rgba(18, 18, 18, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            font-family: 'Lato', sans-serif;
-            -webkit-font-smoothing: antialiased;
+        /* 搜索框动画 */
+        .search-bar-enter { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .search-bar-exit { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideDown { from { height: 0; opacity: 0; margin-bottom: 0; } to { height: 60px; opacity: 1; margin-bottom: 1rem; } }
+        @keyframes slideUp { from { height: 60px; opacity: 1; margin-bottom: 1rem; } to { height: 0; opacity: 0; margin-bottom: 0; } }
+
+        /* 卡片交互 */
+        .note-container {
+            position: relative; overflow: hidden; border-radius: 24px; margin-bottom: 1rem; touch-action: pan-y;
+            transition: transform 0.2s ease;
+        }
+        .note-container:active { transform: scale(0.98); }
+        
+        .note-card-content {
+            position: relative; z-index: 10;
+            background: #121212;
+            transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: transform;
+        }
+        
+        .note-actions {
+            position: absolute; top: 0; right: 0; bottom: 0; width: 100%;
+            display: flex; justify-content: flex-end; align-items: center;
+            padding-right: 20px; gap: 16px; background: #0A0A0A; z-index: 1; border-radius: 24px;
+        }
+        
+        /* 悬浮球 & 菜单 */
+        #floatingContainer { position: fixed; z-index: 999; touch-action: none; }
+        .assistive-btn { 
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 10px 30px -10px rgba(0,0,0,0.5);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .assistive-btn:active { transform: scale(0.9); }
+        .menu-pop { animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; transform-origin: bottom right; }
+        @keyframes menuPop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+
+        /* Markdown Styles in Notes */
+        .md-bold { font-weight: 800; color: #fff; }
+        .md-italic { font-style: italic; color: #BD93F9; }
+
+        /* 隐藏截图区 */
+        #shareCaptureArea {
+            position: fixed; top: -9999px; left: -9999px;
+            width: 1080px; height: 1920px; background: #050505;
+            display: flex; flex-direction: column; padding: 120px;
         }
 
-        /* 顶部极简标题 */
-        header {
-            padding: 20px 20px 10px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 24px;
-            font-weight: 700;
-            color: #222;
-            margin: 0;
-            letter-spacing: -0.5px;
-        }
-
-        /* 瀑布流容器 */
-        .gallery-container {
-            column-count: 2; /* 手机端默认两列 */
-            column-gap: 15px;
-            padding: 15px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* 响应式：平板和桌面增加列数 */
-        @media (min-width: 768px) {
-            .gallery-container { column-count: 3; }
-        }
-        @media (min-width: 1024px) {
-            .gallery-container { column-count: 4; }
-        }
-
-        /* 卡片样式 */
-        .card-wrapper {
-            break-inside: avoid; /* 防止卡片被断开 */
-            margin-bottom: 15px;
-            position: relative;
-        }
-
-        .card {
-            position: relative;
-            border-radius: 20px;
-            overflow: hidden;
-            background-color: #333; /* 图片加载前的底色 */
-            color: white;
-            transition: transform 0.2s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            /* 强制变换，解决部分移动端圆角溢出问题 */
-            transform: translateZ(0); 
-        }
-
-        .card:active {
-            transform: scale(0.98);
-        }
-
-        /* 背景图层 */
-        .card-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover;
-            background-position: center;
-            opacity: 0.8;
-            /* 关键：混合模式制造艺术感 */
-            mix-blend-mode: hard-light; 
-            filter: contrast(1.1) brightness(0.9);
-        }
-
-        /* 渐变遮罩，保证文字可读性 */
-        .card-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6));
-            z-index: 1;
-        }
-
-        /* 内容区域 */
-        .card-content {
-            position: relative;
-            z-index: 2;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            min-height: 180px; /* 最小高度 */
-            justify-content: space-between;
-        }
-
-        .date {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.9;
-            margin-bottom: 10px;
-            font-family: 'Lato', sans-serif;
-        }
-
-        .title {
-            font-family: 'Playfair Display', serif;
-            font-size: 28px;
-            line-height: 1.1;
-            font-weight: 700;
-            margin-top: auto; /* 推到底部 */
-            margin-bottom: 5px;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        .desc {
-            font-size: 13px;
-            opacity: 0.85;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* 分享按钮 */
-        .share-btn {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            z-index: 3;
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.3);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .share-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: white;
-        }
-
-        .share-btn.loading {
-            animation: pulse 1s infinite;
-            background: rgba(255,255,255,0.5);
-            pointer-events: none;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* 隐藏的加载提示 */
-        #toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 100;
-        }
-
+        textarea::placeholder { color: rgba(255,255,255,0.2); }
     </style>
 </head>
-<body>
+<body class="flex justify-center min-h-screen bg-black text-white">
 
-    <header>
-        <h1>My Gallery</h1>
-    </header>
+    <div class="aurora-bg">
+        <div class="blob w-96 h-96 bg-teal/20 top-[-10%] left-[-10%] animate-blob"></div>
+        <div class="blob w-[500px] h-[500px] bg-purple/20 bottom-[-20%] right-[-20%] animate-blob" style="animation-delay: 2s"></div>
+        <div class="blob w-64 h-64 bg-orange/10 top-[40%] left-[20%] animate-blob" style="animation-delay: 4s"></div>
+    </div>
 
-    <div class="gallery-container" id="app">
-        </div>
-
-    <div id="toast">Generating Image...</div>
-
-    <script>
-        // 1. 数据源
-        const notes = [
-            { id: 1, date: "29 Dec", title: "Year End Party", desc: "Retro Funk theme. Don't forget the dress code!", color: "#e63946" },
-            { id: 2, date: "Today", title: "UI Trend", desc: "Minimalism is evolving into something more fluid.", color: "#2a9d8f" },
-            { id: 3, date: "28 Dec", title: "Design", desc: "Art is not what you see, but what you make others see.", color: "#264653" },
-            { id: 4, date: "Now", title: "Idea", desc: "An app that turns simple notes into museum-worthy posters.", color: "#f4a261" },
-            { id: 5, date: "Future", title: "Vision", desc: "Building the next generation of creative tools.", color: "#1d3557" },
-            { id: 6, date: "Note", title: "Meeting", desc: "Sync with the dev team about the new masonry layout.", color: "#457b9d" }
-        ];
-
-        const container = document.getElementById('app');
-
-        // 2. 渲染函数
-        function renderGallery() {
-            notes.forEach((note, index) => {
-                // 随机高度模拟瀑布流内容的参差感 (在 CSS Grid/Column 中主要靠内容撑开)
-                // 这里我们给 desc 加点随机长度的占位文本来模拟真实场景，或者直接设置 min-height
-                const randomHeight = 200 + Math.random() * 100; 
-                
-                // 随机图片 (使用 Picsum, 加 seed 保证每次刷新图片不变)
-                const imgUrl = `https://picsum.photos/seed/${note.id + 50}/400/600`;
-
-                const cardWrapper = document.createElement('div');
-                cardWrapper.className = 'card-wrapper';
-
-                const html = `
-                    <div class="card" id="card-${note.id}" style="background-color: ${note.color}; min-height: ${randomHeight}px">
-                        <div class="card-bg" style="background-image: url('${imgUrl}')"></div>
-                        <div class="card-overlay"></div>
-                        <div class="card-content">
-                            <div class="date">${note.date}</div>
-                            <div>
-                                <div class="title">${note.title}</div>
-                                <div class="desc">${note.desc}</div>
-                            </div>
-                        </div>
-                        <div class="share-btn" onclick="shareCard(${note.id}, this)">
-                            <svg viewBox="0 0 24 24">
-                                <path d="M12 3L12 15M12 3L8 7M12 3L16 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M5 13V18C5 19.1046 5.89543 20 7 20H17C18.1046 20 19 19.1046 19 18V13" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
+    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/30 backdrop-blur-sm">
+        
+        <header class="px-6 pt-14 pb-2 z-20 pointer-events-auto">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-teal via-purple to-orange p-[2px] shadow-glow-teal">
+                        <div class="w-full h-full rounded-[14px] bg-black flex items-center justify-center overflow-hidden">
+                            <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal to-purple">H</span>
                         </div>
                     </div>
-                `;
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-white leading-none">HazeNote</h1>
+                        <p class="text-xs text-gray-500 font-medium tracking-widest uppercase mt-1">Aurora OS</p>
+                    </div>
+                </div>
                 
-                cardWrapper.innerHTML = html;
-                container.appendChild(cardWrapper);
-            });
+                <button onclick="toggleSearch()" class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition active:scale-95">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </button>
+            </div>
+
+            <div id="searchContainer" class="hidden overflow-hidden glass-panel rounded-2xl">
+                <div class="h-full flex items-center px-4">
+                    <i class="fa-solid fa-bolt text-teal mr-3 text-sm"></i>
+                    <input id="searchInput" type="text" placeholder="Search ideas..." class="bg-transparent w-full text-white placeholder-gray-600 outline-none h-[60px]" oninput="handleSearch(this.value)">
+                    <button onclick="toggleSearch()" class="text-gray-500 px-2"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <div class="glass-panel px-4 py-1.5 rounded-full text-xs text-gray-400 font-bold tracking-wide whitespace-nowrap" id="noteCount">
+                    0 Notes
+                </div>
+                <div id="pinCountBadge" class="hidden glass-panel px-4 py-1.5 rounded-full text-xs text-purple border-purple/30 font-bold whitespace-nowrap">
+                    <i class="fa-solid fa-thumbtack mr-1"></i> 0/3
+                </div>
+            </div>
+        </header>
+
+        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-4 no-scrollbar touch-pan-y">
+            </main>
+
+        <div id="floatingContainer" style="top: 85%; left: 82%;">
+            <div id="assistiveMenu" class="absolute bottom-20 right-0 glass-panel rounded-2xl p-2 w-48 shadow-2xl hidden flex-col gap-1 origin-bottom-right z-50 border-white/10">
+                <button onclick="changeView('list')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-bars-staggered text-teal w-5"></i> <span class="text-sm font-bold">List View</span>
+                </button>
+                <button onclick="changeView('grid')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-grid-2 text-purple w-5"></i> <span class="text-sm font-bold">Grid View</span>
+                </button>
+                <div class="h-px bg-white/10 my-1"></div>
+                <button onclick="exportData()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-download text-gray-500 w-5"></i> <span class="text-sm font-bold">Backup</span>
+                </button>
+                <button onclick="triggerImport()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-upload text-gray-500 w-5"></i> <span class="text-sm font-bold">Restore</span>
+                </button>
+            </div>
+
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <div id="assistiveBtn" class="assistive-btn w-14 h-14 rounded-full bg-white text-black text-2xl flex items-center justify-center z-10 cursor-pointer">
+                    <i class="fa-solid fa-plus pointer-events-none transition-transform duration-300" id="fabIcon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="noteModal" class="fixed inset-0 bg-[#050505]/95 backdrop-blur-xl z-[60] hidden flex flex-col transition-opacity duration-200">
+        <div class="px-6 pt-14 pb-4 flex justify-between items-center">
+            <button onclick="closeModal()" class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <span class="text-xs font-bold text-teal tracking-[0.2em] uppercase" id="modalTitle">NEW THOUGHT</span>
+            <button onclick="saveNote()" class="w-10 h-10 rounded-full bg-teal text-black flex items-center justify-center font-bold hover:scale-110 transition shadow-glow-teal">
+                <i class="fa-solid fa-check"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 px-8 pt-6">
+            <textarea id="noteInput" class="w-full h-full bg-transparent text-white text-xl font-medium placeholder-gray-700 resize-none leading-relaxed outline-none" placeholder="Type something...\nUse **bold** for emphasis."></textarea>
+        </div>
+        
+        <div class="px-8 pb-12">
+            <div class="glass-panel p-2 rounded-full inline-flex gap-2">
+                <button onclick="setColor('dark')" class="color-btn w-8 h-8 rounded-full bg-[#1A1A1A] border border-white/20 transition-transform hover:scale-110"></button>
+                <button onclick="setColor('teal')" class="color-btn w-8 h-8 rounded-full bg-teal transition-transform hover:scale-110"></button>
+                <button onclick="setColor('purple')" class="color-btn w-8 h-8 rounded-full bg-purple transition-transform hover:scale-110"></button>
+                <button onclick="setColor('orange')" class="color-btn w-8 h-8 rounded-full bg-orange transition-transform hover:scale-110"></button>
+            </div>
+            <p class="text-[10px] text-gray-600 mt-4 ml-2 font-mono">MD SUPPORTED: **BOLD**, *ITALIC*</p>
+        </div>
+    </div>
+
+    <div id="shareCaptureArea">
+        <div class="flex-1 flex flex-col justify-center relative z-10">
+            <div class="w-16 h-16 rounded-full border-2 border-white/20 flex items-center justify-center mb-12">
+                <i class="fa-solid fa-quote-left text-3xl text-white/50"></i>
+            </div>
+            <p id="shareTextContent" class="text-[70px] font-bold leading-tight text-white mb-12 whitespace-pre-wrap"></p>
+            <div class="w-20 h-2 bg-current opacity-50 mb-8" id="shareAccentLine"></div>
+            <p id="shareDateContent" class="text-[32px] text-gray-400 font-mono tracking-wider"></p>
+        </div>
+        <div class="flex justify-between items-end border-t border-white/10 pt-10">
+            <div>
+                <h1 class="text-[50px] font-bold text-white leading-none tracking-tight">HazeNote</h1>
+                <p class="text-[24px] text-gray-500 mt-2 font-medium">Captured in Aurora OS</p>
+            </div>
+            <div class="w-20 h-20 bg-white text-black rounded-2xl flex items-center justify-center">
+                <i class="fa-solid fa-bolt text-[30px]"></i>
+            </div>
+        </div>
+        <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-b from-teal/10 to-transparent rounded-full blur-[100px] pointer-events-none"></div>
+    </div>
+
+    <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
+
+    <script>
+        const CONFIG = { PIN_LIMIT: 3, LONG_PRESS_MS: 600 };
+        let state = {
+            notes: [],
+            viewMode: localStorage.getItem('haze_view_mode') || 'grid',
+            searchQuery: '',
+            isSearchOpen: false,
+            editingColor: 'dark',
+            editingId: null // 新增：用于判断是新建还是编辑
+        };
+
+        window.onload = () => {
+            loadNotes();
+            initDraggableButton();
+        };
+
+        function loadNotes() {
+            const saved = localStorage.getItem('haze_notes_v4');
+            if (saved) state.notes = JSON.parse(saved);
+            renderNotes();
         }
 
-        // 3. 核心功能：截图并分享
-        async function shareCard(id, btn) {
-            const card = document.getElementById(`card-${id}`);
-            const toast = document.getElementById('toast');
+        function saveToLocal() {
+            localStorage.setItem('haze_notes_v4', JSON.stringify(state.notes));
+            localStorage.setItem('haze_view_mode', state.viewMode);
+            renderNotes();
+        }
+
+        // ========== 核心逻辑 (CRUD) ==========
+        
+        function openModal(noteId = null) {
+            const modal = document.getElementById('noteModal');
+            const input = document.getElementById('noteInput');
+            const title = document.getElementById('modalTitle');
+
+            if (noteId) {
+                // 编辑模式
+                const note = state.notes.find(n => n.id === noteId);
+                if (!note) return;
+                state.editingId = noteId;
+                state.editingColor = note.color || 'dark';
+                input.value = note.content;
+                title.innerText = "EDIT THOUGHT";
+            } else {
+                // 新建模式
+                state.editingId = null;
+                state.editingColor = 'dark';
+                input.value = '';
+                title.innerText = "NEW THOUGHT";
+            }
+
+            // 更新颜色选择器UI
+            updateColorUI(state.editingColor);
             
-            // 动画效果
-            btn.classList.add('loading');
-            toast.style.opacity = '1';
-            
-            try {
-                // 临时隐藏分享按钮，避免截图里出现它
-                const shareBtn = card.querySelector('.share-btn');
-                shareBtn.style.display = 'none';
+            modal.classList.remove('hidden');
+            // 简单的淡入动画
+            requestAnimationFrame(() => {
+                modal.classList.remove('opacity-0');
+                modal.classList.add('opacity-100');
+            });
+            setTimeout(() => input.focus(), 100);
+        }
 
-                // 生成截图
-                // scale: 3 保证高清图
-                const canvas = await html2canvas(card, {
-                    scale: 3, 
-                    useCORS: true, // 允许跨域图片
-                    backgroundColor: null
-                });
+        function closeModal() {
+            const modal = document.getElementById('noteModal');
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                document.getElementById('noteInput').blur();
+            }, 200);
+        }
 
-                shareBtn.style.display = 'flex'; // 恢复显示
+        function saveNote() {
+            const content = document.getElementById('noteInput').value.trim();
+            if (!content) return closeModal();
 
-                // 转换 Canvas 为 Blob
-                canvas.toBlob(async (blob) => {
-                    const file = new File([blob], `art-note-${id}.png`, { type: 'image/png' });
+            if (state.editingId) {
+                // 更新现有笔记
+                const index = state.notes.findIndex(n => n.id === state.editingId);
+                if (index !== -1) {
+                    state.notes[index].content = content;
+                    state.notes[index].color = state.editingColor;
+                    state.notes[index].updatedAt = new Date().toISOString();
+                }
+            } else {
+                // 创建新笔记
+                const newNote = {
+                    id: Date.now().toString(),
+                    content,
+                    date: new Date().toISOString(),
+                    color: state.editingColor,
+                    isPinned: false
+                };
+                state.notes.unshift(newNote);
+            }
+            saveToLocal();
+            closeModal();
+        }
 
-                    // 检查浏览器是否支持 Web Share API (Level 2 支持文件分享)
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({
-                                files: [file],
-                                title: 'My Art Note',
-                                text: 'Check out this note!'
-                            });
-                        } catch (err) {
-                            console.log('User cancelled share');
-                        }
-                    } else {
-                        // 降级方案：如果是电脑或不支持的浏览器，直接下载图片
-                        const link = document.createElement('a');
-                        link.download = `art-note-${id}.png`;
-                        link.href = canvas.toDataURL();
-                        link.click();
-                        alert("浏览器不支持直接分享，图片已保存到相册/下载文件夹。");
-                    }
-                    
-                    btn.classList.remove('loading');
-                    toast.style.opacity = '0';
+        function setColor(c) {
+            state.editingColor = c;
+            updateColorUI(c);
+        }
 
-                }, 'image/png');
+        function updateColorUI(c) {
+            document.querySelectorAll('.color-btn').forEach(b => {
+                b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black', 'scale-110');
+            });
+            // 找到对应颜色的按钮并高亮（这里简化逻辑，假设点击触发）
+            // 在实际点击时，event.target 会处理。但在打开编辑时需要手动处理。
+            // 简单的做法是重新渲染颜色按钮，或者根据 onclick 属性查找
+            const btns = document.querySelectorAll('.color-btn');
+            btns.forEach(btn => {
+                if(btn.getAttribute('onclick').includes(c)) {
+                    btn.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black', 'scale-110');
+                }
+            })
+        }
 
-            } catch (err) {
-                console.error(err);
-                alert("生成图片失败，请重试");
-                btn.classList.remove('loading');
-                toast.style.opacity = '0';
+        function togglePin(id) {
+            const note = state.notes.find(n => n.id === id);
+            if (!note) return;
+            if (!note.isPinned && state.notes.filter(n => n.isPinned).length >= CONFIG.PIN_LIMIT) {
+                return alert(`Focus limit reached (${CONFIG.PIN_LIMIT}). Unpin something first.`);
+            }
+            note.isPinned = !note.isPinned;
+            saveToLocal();
+        }
+
+        function confirmDelete(id) {
+            if(confirm("Dissolve this thought?")) {
+                const el = document.querySelector(`.note-container[data-id="${id}"]`);
+                el.style.transform = 'translateX(-100%) opacity(0)'; // 删除动画
+                setTimeout(() => {
+                    state.notes = state.notes.filter(n => n.id !== id);
+                    saveToLocal();
+                }, 200);
             }
         }
 
-        // 初始化
-        renderGallery();
+        // ========== 渲染逻辑 ==========
 
+        // 简单的 Markdown 解析器
+        function parseContent(text) {
+            let html = text
+                .replace(/</g, "&lt;").replace(/>/g, "&gt;") // XSS防护
+                .replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>') // Bold
+                .replace(/\*(.*?)\*/g, '<span class="md-italic">$1</span>')   // Italic
+                .replace(/\n/g, '<br>'); // Line breaks
+            return html;
+        }
+
+        function renderNotes() {
+            const list = document.getElementById('noteList');
+            let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
+            
+            // 排序: Pin > Date
+            displayNotes.sort((a, b) => {
+                if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            // 更新统计
+            document.getElementById('noteCount').innerText = `${displayNotes.length} Notes`;
+            const pinnedCount = state.notes.filter(n => n.isPinned).length;
+            const badge = document.getElementById('pinCountBadge');
+            if (pinnedCount > 0) {
+                badge.classList.remove('hidden');
+                badge.innerHTML = `<i class="fa-solid fa-thumbtack mr-1 text-[10px]"></i> ${pinnedCount}/${CONFIG.PIN_LIMIT}`;
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            list.innerHTML = '';
+            
+            // 空状态 (Empty State)
+            if (displayNotes.length === 0) {
+                list.innerHTML = `
+                    <div class="flex flex-col items-center justify-center mt-32 opacity-30 pointer-events-none">
+                        <div class="w-24 h-24 rounded-full border border-dashed border-white flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-wind text-4xl"></i>
+                        </div>
+                        <p class="font-bold tracking-widest text-sm">NOTHING HERE</p>
+                    </div>`;
+                return;
+            }
+
+            displayNotes.forEach((note, index) => {
+                let style = getStyleForNote(note, index);
+                list.innerHTML += createNoteCard(note, style);
+            });
+
+            bindSwipeEvents();
+        }
+
+        function getStyleForNote(note, index) {
+            if (state.viewMode === 'list') return 'list';
+            if (index === 0 && !state.searchQuery && !note.isPinned) return 'hero'; // 如果不是搜索状态且不是置顶，第一个做大卡片
+            return note.color || 'dark';
+        }
+
+        function createNoteCard(note, styleType) {
+            const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+            const isPinned = note.isPinned;
+            const parsedContent = parseContent(note.content);
+            
+            let classes = `note-card-content w-full rounded-[24px] p-6 relative z-10 overflow-hidden border transition-colors `;
+            let inner = '';
+            
+            // 样式配置映射
+            const styles = {
+                'list': {
+                    wrap: 'bg-[#121212] border-white/5 min-h-[90px] flex items-center',
+                    content: `<div class="flex-1 pr-4"><div class="text-gray-200 font-medium line-clamp-1 text-base">${parsedContent}</div><span class="text-[10px] text-gray-500 mt-1 block font-mono">${dateStr}</span></div>`
+                },
+                'hero': {
+                    wrap: 'bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] border-white/10 min-h-[200px] flex flex-col justify-between shadow-2xl',
+                    content: `<div class="mb-2"><span class="text-teal text-[10px] font-bold border border-teal/30 px-2 py-1 rounded">LATEST</span></div>
+                              <div class="text-2xl font-bold text-gray-100 line-clamp-4 leading-relaxed">${parsedContent}</div>
+                              <div class="mt-4 text-[10px] text-gray-600 font-mono text-right flex justify-between items-end"><span>${dateStr}</span><i class="fa-solid fa-arrow-right text-white/20"></i></div>`
+                },
+                'orange': {
+                    wrap: 'bg-orange text-black border-orange min-h-[160px] flex flex-col justify-center text-center',
+                    content: `<div class="text-3xl font-black uppercase leading-none break-all line-clamp-3">${parsedContent}</div><span class="absolute bottom-4 right-5 text-[10px] font-bold opacity-50">${dateStr}</span>`
+                },
+                'teal': {
+                    wrap: 'bg-teal text-black border-teal min-h-[140px]',
+                    content: `<div class="text-lg font-bold leading-tight line-clamp-4">${parsedContent}</div><div class="mt-4 pt-3 border-t border-black/10 text-[10px] font-bold opacity-60 flex justify-between"><span>NOTE</span><span>${dateStr}</span></div>`
+                },
+                'purple': {
+                    wrap: 'bg-purple text-black border-purple min-h-[150px]',
+                    content: `<i class="fa-solid fa-quote-right absolute top-4 right-4 opacity-20 text-xl"></i><div class="text-xl font-medium font-serif italic line-clamp-4 pr-4">${parsedContent}</div><div class="absolute bottom-4 left-6 text-[10px] font-bold opacity-50">${dateStr}</div>`
+                },
+                'dark': {
+                    wrap: 'bg-[#121212] border-white/5 min-h-[140px]',
+                    content: `<div class="text-gray-300 font-medium line-clamp-4 leading-relaxed mb-6 text-lg">${parsedContent}</div><span class="absolute bottom-4 right-6 text-[10px] text-gray-600 font-bold tracking-widest">${dateStr}</span>`
+                }
+            };
+
+            const selectedStyle = styles[styleType] || styles['dark'];
+            classes += selectedStyle.wrap;
+            
+            // Pinned 样式覆盖
+            if (isPinned) {
+                classes = classes.replace('border-white/5', 'border-teal/50 border-2 shadow-glow-teal');
+                inner += `<i class="fa-solid fa-thumbtack ${styleType === 'list' ? 'text-teal text-xs' : 'text-teal absolute top-4 right-4 z-20'}"></i>`;
+            }
+
+            inner += selectedStyle.content;
+
+            return `
+            <div class="note-container group" data-id="${note.id}">
+                <div class="note-actions">
+                    <button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-[#1A1A1A] border border-white/5 flex items-center justify-center text-gray-400">
+                        <i class="fa-solid fa-thumbtack ${isPinned ? 'text-teal' : ''}"></i>
+                    </button>
+                    <button onclick="generateShareImage('${note.id}')" class="w-10 h-10 rounded-full bg-[#1A1A1A] border border-white/5 flex items-center justify-center text-gray-400">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </button>
+                    <button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/10 border border-danger/20 flex items-center justify-center text-danger">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <div class="${classes}" onclick="openModal('${note.id}')" id="card-${note.id}">
+                    ${inner}
+                </div>
+            </div>`;
+        }
+
+        // ========== 交互逻辑 ==========
+        
+        // 拖拽按钮
+        function initDraggableButton() {
+            const container = document.getElementById('floatingContainer');
+            const btn = document.getElementById('assistiveBtn');
+            const menu = document.getElementById('assistiveMenu');
+            const icon = document.getElementById('fabIcon');
+            
+            let isDragging = false, startX, startY, initialLeft, initialTop;
+            let longPressTimer;
+            let isMenuOpen = false;
+
+            // 点击切换菜单
+            btn.onclick = (e) => {
+                if(isDragging) return;
+                isMenuOpen = !isMenuOpen;
+                if(isMenuOpen) {
+                    menu.classList.remove('hidden');
+                    menu.classList.add('menu-pop');
+                    icon.style.transform = 'rotate(45deg)';
+                } else {
+                    // 如果没开菜单，就直接打开新建
+                    openModal();
+                    // icon.style.transform = 'rotate(0deg)';
+                }
+            };
+            
+            // 长按打开菜单 (替代方案)
+            // 这里我们简化逻辑：点击按钮直接打开新建，但是如果按钮处于“菜单模式”，则点击打开菜单。
+            // 修改策略：点击 -> 新建。 
+            // 实际上，把菜单按钮移到外面可能更好，或者用长按呼出菜单。
+            // V4.0 策略：简单的点击=新建。拖动=移动。菜单怎么出来？
+            // 我们添加一个 Long Press 逻辑来呼出菜单，或者点击加号直接呼出菜单，菜单里第一项是新建。
+            // 为了保持流畅：点击 = 打开新建模态框。长按 = 打开菜单。
+
+            btn.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                startX = touch.clientX; startY = touch.clientY;
+                const rect = container.getBoundingClientRect();
+                initialLeft = rect.left; initialTop = rect.top;
+                isDragging = false;
+                
+                longPressTimer = setTimeout(() => {
+                    if(!isDragging) {
+                        navigator.vibrate?.(50);
+                        menu.classList.remove('hidden');
+                        menu.classList.add('menu-pop');
+                        isMenuOpen = true;
+                        icon.style.transform = 'rotate(45deg)';
+                    }
+                }, CONFIG.LONG_PRESS_MS);
+
+            }, {passive: true});
+
+            btn.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
+                    isDragging = true;
+                    clearTimeout(longPressTimer);
+                    // 关闭菜单如果正在拖动
+                    menu.classList.add('hidden');
+                    icon.style.transform = 'rotate(0deg)';
+                    isMenuOpen = false;
+                }
+
+                if (isDragging) {
+                    e.preventDefault(); // 防止滚动
+                    container.style.left = `${initialLeft + deltaX}px`;
+                    container.style.top = `${initialTop + deltaY}px`;
+                }
+            }, {passive: false});
+
+            btn.addEventListener('touchend', () => {
+                clearTimeout(longPressTimer);
+                setTimeout(() => isDragging = false, 100);
+            });
+        }
+
+        // 视图切换
+        function changeView(mode) {
+            state.viewMode = mode;
+            saveToLocal();
+            document.getElementById('assistiveMenu').classList.add('hidden');
+            document.getElementById('fabIcon').style.transform = 'rotate(0deg)';
+        }
+
+        // 搜索
+        function toggleSearch() {
+            const container = document.getElementById('searchContainer');
+            state.isSearchOpen = !state.isSearchOpen;
+            if (state.isSearchOpen) {
+                container.classList.remove('hidden', 'search-bar-exit');
+                container.classList.add('search-bar-enter');
+                document.getElementById('searchInput').focus();
+            } else {
+                container.classList.remove('search-bar-enter');
+                container.classList.add('search-bar-exit');
+                setTimeout(() => container.classList.add('hidden'), 300);
+                state.searchQuery = '';
+                document.getElementById('searchInput').value = '';
+                renderNotes();
+            }
+        }
+
+        function handleSearch(val) {
+            state.searchQuery = val.toLowerCase();
+            renderNotes();
+        }
+
+        // 滑动逻辑
+        function bindSwipeEvents() {
+            document.querySelectorAll('.note-container').forEach(el => {
+                const card = el.querySelector('.note-card-content');
+                let startX, currentX;
+                
+                card.addEventListener('touchstart', e => {
+                    startX = e.touches[0].clientX;
+                    // 重置其他卡片
+                    document.querySelectorAll('.note-card-content').forEach(c => {
+                        if (c !== card) c.style.transform = `translateX(0)`;
+                    });
+                }, {passive: true});
+
+                card.addEventListener('touchmove', e => {
+                    currentX = e.touches[0].clientX;
+                    const diff = currentX - startX;
+                    // 只允许向左滑
+                    if (diff < 0 && diff > -200) {
+                        card.style.transform = `translateX(${diff}px)`;
+                    }
+                }, {passive: true});
+
+                card.addEventListener('touchend', e => {
+                    const diff = currentX - startX;
+                    if (diff < -80) {
+                        card.style.transform = `translateX(-180px)`; // 展开
+                    } else {
+                        card.style.transform = `translateX(0)`; // 回弹
+                    }
+                });
+            });
+        }
+
+        // 分享图片生成
+        function generateShareImage(id) {
+            const note = state.notes.find(n => n.id === id);
+            if(!note) return;
+
+            const capture = document.getElementById('shareCaptureArea');
+            const dateStr = new Date(note.date).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            // 样式重置
+            capture.style.background = '#050505';
+            capture.querySelector('i').className = 'fa-solid fa-quote-left text-3xl text-white/50';
+            document.getElementById('shareTextContent').className = `text-[70px] font-bold leading-tight text-white mb-12 whitespace-pre-wrap`;
+            document.getElementById('shareAccentLine').className = 'w-20 h-2 opacity-100 mb-8';
+
+            // 颜色适配
+            if(note.color === 'teal') {
+                capture.style.background = '#64FFDA';
+                document.getElementById('shareTextContent').classList.replace('text-white', 'text-black');
+                document.getElementById('shareDateContent').classList.replace('text-gray-400', 'text-black');
+                document.getElementById('shareAccentLine').style.backgroundColor = '#000';
+                capture.querySelector('.fa-quote-left').classList.replace('text-white/50', 'text-black/30');
+            } else if (note.color === 'purple') {
+                capture.style.background = '#BD93F9';
+                document.getElementById('shareTextContent').classList.replace('text-white', 'text-black');
+                document.getElementById('shareDateContent').classList.replace('text-gray-400', 'text-black');
+                document.getElementById('shareAccentLine').style.backgroundColor = '#000';
+                capture.querySelector('.fa-quote-left').classList.replace('text-white/50', 'text-black/30');
+            } else if (note.color === 'orange') {
+                capture.style.background = '#FFB86C';
+                document.getElementById('shareTextContent').classList.replace('text-white', 'text-black');
+                document.getElementById('shareDateContent').classList.replace('text-gray-400', 'text-black');
+                document.getElementById('shareAccentLine').style.backgroundColor = '#000';
+                capture.querySelector('.fa-quote-left').classList.replace('text-white/50', 'text-black/30');
+            } else {
+                 document.getElementById('shareAccentLine').style.backgroundColor = '#64FFDA';
+            }
+
+            document.getElementById('shareTextContent').innerText = note.content;
+            document.getElementById('shareDateContent').innerText = dateStr;
+
+            // 恢复卡片位置
+            document.querySelectorAll('.note-card-content').forEach(c => c.style.transform = `translateX(0)`);
+
+            html2canvas(capture, { scale: 1, backgroundColor: null, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `HazeNote_${Date.now()}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        }
+
+        // 导入导出
+        function exportData() {
+            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
+            a.download = `HazeNote_Backup_${Date.now()}.json`; a.click();
+        }
+        function triggerImport() { document.getElementById('fileInput').click(); }
+        function importData(input) {
+            const f = input.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = e => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(Array.isArray(d)) { state.notes = [...d, ...state.notes]; saveToLocal(); alert('Thoughts restored.'); }
+                } catch(err) { alert('Invalid file'); }
+            }; r.readAsText(f);
+        }
     </script>
 </body>
 </html>
