@@ -1,14 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>HazeNote Gallery</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/notionists/png?seed=Haze&backgroundColor=000000">
+    
+    <title>HazeNote</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400..900&display=swap" rel="stylesheet">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -17,7 +28,7 @@
                     colors: {
                         black: '#000000',
                         dark: '#0a0a0a',
-                        teal: '#85B9C9',
+                        teal: '#85B9C9', // Signature Haze Teal
                         danger: '#FF4A4A',
                     },
                     fontFamily: {
@@ -25,7 +36,11 @@
                         serif: ['Playfair Display', 'serif'],
                     },
                     boxShadow: {
-                        'glow': '0 0 20px rgba(255, 255, 255, 0.1)',
+                        'glow': '0 0 25px rgba(133, 185, 201, 0.15)',
+                        'glow-teal': '0 0 30px rgba(133, 185, 201, 0.3)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     }
                 }
             }
@@ -33,6 +48,7 @@
     </script>
 
     <style>
+        /* Global Reset & Base */
         * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
         body { 
             background-color: #000000; 
@@ -47,17 +63,23 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Login Layer Transitions */
+        #loginLayer { transition: opacity 0.5s ease, transform 0.5s ease; z-index: 9999; }
+        .hidden-login { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        
+        /* App Content Blur Effect */
+        #mainApp { transition: filter 0.5s ease, transform 0.5s ease; }
+        .app-blur { filter: blur(20px); transform: scale(0.95); pointer-events: none; }
+
+        /* Ambient Background */
         .blob-bg {
             position: absolute; border-radius: 50%; filter: blur(100px); z-index: 0; opacity: 0.3; pointer-events: none;
         }
 
-        /* 搜索框动画 */
-        .search-bar-enter { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .search-bar-exit { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        /* Search Animation */
         @keyframes slideDown { from { width: 48px; opacity: 0.5; } to { width: 100%; opacity: 1; } }
-        @keyframes slideUp { from { width: 100%; opacity: 1; } to { width: 48px; opacity: 0.5; } }
 
-        /* Bento Grid 布局 */
+        /* Bento Grid Layout */
         #noteList {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -67,13 +89,10 @@
             padding-bottom: 120px;
         }
 
+        /* Note Cards */
         .note-card {
-            position: relative;
-            border-radius: 24px;
-            overflow: hidden;
-            transition: transform 0.2s;
-            background-color: #111;
-            touch-action: pan-y;
+            position: relative; border-radius: 24px; overflow: hidden;
+            transition: transform 0.2s; background-color: #111; touch-action: pan-y;
         }
         .note-card:active { transform: scale(0.98); }
 
@@ -90,44 +109,81 @@
         .card-overlay {
             position: absolute; inset: 0; z-index: 1;
             background: linear-gradient(to top, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.1) 100%);
-            backdrop-filter: blur(0px);
         }
         
         .note-content-layer { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; }
 
-        #floatingContainer { position: fixed; z-index: 999; touch-action: none; }
-        .assistive-btn { 
-            box-shadow: 0 10px 40px -10px rgba(255,255,255,0.3);
-            transition: transform 0.1s; 
-        }
+        /* Floating Button */
+        #floatingContainer { position: fixed; z-index: 900; touch-action: none; }
+        .assistive-btn { box-shadow: 0 10px 40px -10px rgba(255,255,255,0.3); transition: transform 0.1s; }
         .assistive-btn.dragging { transform: scale(1.1); opacity: 0.9; }
 
-        /* 截图区 */
+        /* Inputs */
+        input:focus, textarea:focus { outline: none; }
+        .input-secure { 
+            background: transparent; border-bottom: 1px solid #333; 
+            color: #85B9C9; text-align: center; font-size: 1.5rem; 
+            transition: border-color 0.3s; width: 100%; padding: 10px;
+            font-family: monospace; /* Mask password dots nicely */
+        }
+        .input-secure:focus { border-color: #85B9C9; }
+
+        /* Share Capture - Hidden */
         #shareCaptureArea {
             position: fixed; top: -9999px; left: -9999px; width: 1080px; height: 1920px;
             background: #000; display: flex; flex-direction: column; padding: 100px;
             font-family: 'Urbanist', sans-serif;
         }
-
-        textarea:focus { outline: none; }
-        
-        /* 确保分享图里的青色引号在各种背景下都清晰 */
-        .quote-mark-teal {
-            color: #85B9C9;
-            display: inline-block;
-        }
+        .quote-mark-teal { color: #85B9C9; display: inline-block; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen bg-black text-white">
+<body class="flex justify-center min-h-screen bg-black text-white overflow-hidden">
+
+    <div id="loginLayer" class="fixed inset-0 w-full h-full bg-black flex flex-col items-center justify-center p-8 z-[9999]">
+        
+        <div id="viewSetup" class="hidden w-full max-w-sm flex-col items-center text-center">
+            <h1 class="text-3xl font-bold mb-2">Create Vault</h1>
+            <p class="text-gray-500 text-xs mb-8">Data is encrypted locally. Don't lose this password.</p>
+            
+            <input type="text" id="setupUsername" placeholder="Your Alias" class="input-secure mb-4 !font-sans !text-xl" autocomplete="off">
+            <input type="password" id="setupPassword" placeholder="Master Password" class="input-secure mb-8" autocomplete="new-password">
+            
+            <button onclick="setupVault()" class="w-16 h-16 rounded-full bg-teal text-black flex items-center justify-center hover:scale-105 transition shadow-glow-teal">
+                <i class="fa-solid fa-arrow-right text-xl"></i>
+            </button>
+        </div>
+
+        <div id="viewUnlock" class="hidden w-full max-w-sm flex-col items-center text-center">
+            <div class="w-20 h-20 rounded-full border border-white/10 flex items-center justify-center mb-8 animate-pulse-slow">
+                <i class="fa-solid fa-shield-halved text-3xl text-gray-500"></i>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight mb-2">Welcome Back, <span id="displayUsername" class="text-teal"></span></h1>
+            <p class="text-gray-600 text-xs mb-8 tracking-widest uppercase">Locked by AES-256</p>
+
+            <div class="w-full relative mb-8">
+                <input type="password" id="unlockPassword" placeholder="Enter Passkey" class="input-secure" autocomplete="current-password">
+            </div>
+
+            <button onclick="unlockVault()" class="w-full bg-teal text-black font-bold py-4 rounded-full text-lg shadow-glow-teal hover:scale-[1.02] transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-key"></i> Decrypt & Enter
+            </button>
+            
+            <p id="loginError" class="text-danger text-xs mt-4 hidden">Invalid Passkey</p>
+            
+            <div class="mt-12 flex items-center justify-center gap-2 text-[10px] text-gray-700 uppercase tracking-widest font-bold">
+                <i class="fa-solid fa-database"></i> Local Storage Encrypted
+            </div>
+        </div>
+    </div>
 
     <div class="blob-bg w-full h-[500px] bg-teal/10 top-[-100px] left-0"></div>
     <div class="blob-bg w-80 h-80 bg-purple/20 bottom-0 right-0"></div>
 
-    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/20 backdrop-blur-sm">
+    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/20 backdrop-blur-sm app-blur">
         
         <header class="px-5 pt-14 pb-4 z-20 pointer-events-auto flex justify-between items-center">
             <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-teal to-purple p-[1.5px] shadow-glow">
-                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Art" class="w-full h-full rounded-full bg-black">
+                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Haze" class="w-full h-full rounded-full bg-black">
             </div>
 
             <div id="searchContainer" class="relative flex justify-end items-center h-10 transition-all duration-300 w-10">
@@ -138,9 +194,12 @@
             </div>
         </header>
 
-        <div class="px-6 mb-4 flex gap-4 text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-            <span id="noteCount">0 ART PIECES</span>
-            <span id="pinCountBadge" class="hidden text-teal">PINNED</span>
+        <div class="px-6 mb-4 flex items-center gap-3 text-[10px] font-bold tracking-widest text-gray-500 uppercase overflow-x-auto no-scrollbar">
+            <span id="statNotes" class="whitespace-nowrap">0 NOTES</span>
+            <span class="text-white/20">•</span>
+            <span id="statWords" class="whitespace-nowrap">0 WORDS</span>
+            <span class="text-white/20">•</span>
+            <span id="statDays" class="whitespace-nowrap">1 DAY</span>
         </div>
 
         <main id="noteList" class="px-4 overflow-y-auto no-scrollbar touch-pan-y">
@@ -156,10 +215,13 @@
                 </button>
                 <div class="h-px bg-white/10 my-1"></div>
                 <button onclick="exportData()" class="menu-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 transition w-full text-left">
-                    <i class="fa-solid fa-download w-4"></i> <span class="text-xs font-bold">Backup</span>
+                    <i class="fa-solid fa-download w-4"></i> <span class="text-xs font-bold">Backup (Encrypted)</span>
                 </button>
                 <button onclick="triggerImport()" class="menu-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 transition w-full text-left">
-                    <i class="fa-solid fa-upload w-4"></i> <span class="text-xs font-bold">Restore</span>
+                    <i class="fa-solid fa-upload w-4"></i> <span class="text-xs font-bold">Import</span>
+                </button>
+                <button onclick="lockVault()" class="menu-item flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-danger transition w-full text-left">
+                    <i class="fa-solid fa-lock w-4"></i> <span class="text-xs font-bold">Lock Now</span>
                 </button>
             </div>
 
@@ -194,13 +256,10 @@
     <div id="shareCaptureArea">
         <img id="shareBgImg" src="" class="absolute inset-0 w-full h-full object-cover opacity-50 grayscale contrast-125">
         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
-        
         <div class="relative z-10 flex-1 flex flex-col justify-center items-center text-center px-12">
             <p id="shareTextContent" class="text-[70px] font-serif italic leading-snug text-white mb-16 drop-shadow-2xl"></p>
-            
             <p id="shareDateContent" class="text-[28px] text-gray-400 font-sans uppercase tracking-[0.4em] opacity-80"></p>
         </div>
-        
         <div class="relative z-10 flex justify-between items-end border-t border-white/10 pt-10 w-full">
             <div>
                 <h1 class="text-[40px] font-bold text-white tracking-tighter">HazeNote</h1>
@@ -216,8 +275,14 @@
 
     <script>
         const CONFIG = { PIN_LIMIT: 3, LONG_PRESS_MS: 500 };
+        
+        // SESSION STATE (Memory only, wiped on refresh)
+        let sessionKey = null; 
+
+        // PERSISTENT STATE STRUCTURE
         let state = {
-            notes: [],
+            notes: [], // Will stay empty until decrypted
+            user: { name: '', joinDate: null },
             viewMode: localStorage.getItem('haze_view_mode') || 'grid',
             searchQuery: '',
             isSearchOpen: false,
@@ -225,29 +290,137 @@
         };
 
         window.onload = () => {
-            loadNotes();
+            checkVaultStatus();
             initDraggableButton();
         };
 
-        function loadNotes() {
-            const saved = localStorage.getItem('haze_notes_v4_art');
-            if (saved) state.notes = JSON.parse(saved);
+        // ========== ENCRYPTION CORE (AES) ==========
+        
+        function encryptData(data, key) {
+            return CryptoJS.AES.encrypt(JSON.stringify(data), key).toString();
+        }
+
+        function decryptData(ciphertext, key) {
+            try {
+                const bytes = CryptoJS.AES.decrypt(ciphertext, key);
+                const decryptedStr = bytes.toString(CryptoJS.enc.Utf8);
+                return JSON.parse(decryptedStr);
+            } catch (e) {
+                return null; // Decryption failed
+            }
+        }
+
+        // ========== VAULT & AUTH FLOW ==========
+
+        function checkVaultStatus() {
+            // Check if user meta exists (Publicly visible meta)
+            const meta = localStorage.getItem('haze_meta_v6');
+            if (!meta) {
+                // New User -> Setup View
+                document.getElementById('viewSetup').classList.remove('hidden');
+                document.getElementById('viewSetup').classList.add('flex');
+            } else {
+                // Returning User -> Unlock View
+                const userMeta = JSON.parse(meta);
+                document.getElementById('displayUsername').innerText = userMeta.name;
+                document.getElementById('viewUnlock').classList.remove('hidden');
+                document.getElementById('viewUnlock').classList.add('flex');
+            }
+        }
+
+        function setupVault() {
+            const name = document.getElementById('setupUsername').value.trim().toUpperCase();
+            const pass = document.getElementById('setupPassword').value;
+
+            if (!name || !pass) return alert("Name and Password required.");
+            
+            // 1. Save Public Meta (Name)
+            const publicMeta = { name: name, joinDate: new Date().toISOString() };
+            localStorage.setItem('haze_meta_v6', JSON.stringify(publicMeta));
+
+            // 2. Encrypt & Save Empty Vault
+            const emptyNotes = [];
+            const encryptedNotes = encryptData(emptyNotes, pass);
+            localStorage.setItem('haze_vault_v6', encryptedNotes);
+
+            // 3. Set Session & Unlock
+            sessionKey = pass;
+            state.user = publicMeta;
+            state.notes = emptyNotes;
+            
+            enterApp();
+        }
+
+        function unlockVault() {
+            const pass = document.getElementById('unlockPassword').value;
+            const encryptedVault = localStorage.getItem('haze_vault_v6');
+            const meta = JSON.parse(localStorage.getItem('haze_meta_v6'));
+
+            if (!pass) return;
+
+            const decryptedNotes = decryptData(encryptedVault, pass);
+
+            if (decryptedNotes !== null && Array.isArray(decryptedNotes)) {
+                // Success
+                sessionKey = pass;
+                state.notes = decryptedNotes;
+                state.user = meta;
+                document.getElementById('loginError').classList.add('hidden');
+                enterApp();
+            } else {
+                // Fail
+                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('unlockPassword').classList.add('border-danger', 'text-danger');
+            }
+        }
+
+        function enterApp() {
+            // Transition UI
+            document.getElementById('loginLayer').classList.add('hidden-login');
+            document.getElementById('mainApp').classList.remove('app-blur');
+            updateStats();
             renderNotes();
         }
 
-        function saveToLocal() {
-            localStorage.setItem('haze_notes_v4_art', JSON.stringify(state.notes));
+        function lockVault() {
+            sessionKey = null;
+            state.notes = []; // Clear memory
+            document.getElementById('loginLayer').classList.remove('hidden-login');
+            document.getElementById('mainApp').classList.add('app-blur');
+            document.getElementById('unlockPassword').value = ''; // Clear input
+        }
+
+        function saveVault() {
+            if (!sessionKey) return; // Cannot save without key
+            const encryptedNotes = encryptData(state.notes, sessionKey);
+            localStorage.setItem('haze_vault_v6', encryptedNotes);
+            updateStats();
             renderNotes();
         }
 
-        // ========== Render Logic ==========
+        // ========== APP LOGIC ==========
+
+        function updateStats() {
+            const notesCount = state.notes.length;
+            const wordsCount = state.notes.reduce((acc, note) => acc + note.content.length, 0);
+            
+            let daysCount = 1;
+            if (state.user.joinDate) {
+                const start = new Date(state.user.joinDate);
+                const now = new Date();
+                const diffTime = Math.abs(now - start);
+                daysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1; 
+            }
+
+            document.getElementById('statNotes').innerText = `${notesCount} NOTE${notesCount !== 1 ? 'S' : ''}`;
+            document.getElementById('statWords').innerText = `${wordsCount} WORD${wordsCount !== 1 ? 'S' : ''}`;
+            document.getElementById('statDays').innerText = `${daysCount} DAY${daysCount !== 1 ? 'S' : ''}`;
+        }
+
         function renderNotes() {
             const list = document.getElementById('noteList');
             let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
             displayNotes.sort((a, b) => (b.isPinned === a.isPinned) ? 0 : a.isPinned ? -1 : 1);
-
-            document.getElementById('noteCount').innerText = `${displayNotes.length} ART PIECES`;
-            document.getElementById('pinCountBadge').className = state.notes.some(n=>n.isPinned) ? 'text-teal' : 'hidden';
 
             list.innerHTML = '';
             
@@ -258,12 +431,12 @@
             }
 
             if (displayNotes.length === 0) {
-                list.innerHTML = `<div class="col-span-2 text-center mt-32 text-gray-700 font-serif italic text-xl">The canvas is empty.</div>`;
+                list.innerHTML = `<div class="col-span-2 text-center mt-32 text-gray-700 font-serif italic text-xl">Vault is quiet.</div>`;
                 return;
             }
 
             displayNotes.forEach((note, index) => {
-                if(!note.imgSeed) { note.imgSeed = Math.floor(Math.random() * 1000); saveToLocal(); }
+                if(!note.imgSeed) note.imgSeed = Math.floor(Math.random() * 1000);
                 
                 let shapeClass = 'card-square'; 
                 if (state.viewMode === 'grid') {
@@ -283,6 +456,8 @@
             const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
             const imgUrl = `https://picsum.photos/seed/${note.imgSeed}/400/600?grayscale&blur=2`;
             const containerClass = state.viewMode === 'list' ? `note-card w-full min-h-[100px] mb-4` : `note-card ${shapeClass}`;
+            
+            const displayUser = state.user.name || 'ANON';
 
             return `
             <div class="${containerClass}" onclick="openNote('${note.id}')">
@@ -301,7 +476,7 @@
                             ${note.content}
                         </p>
                         <div class="mt-3 flex justify-between items-end border-t border-white/10 pt-2">
-                            <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Haze.${note.imgSeed}</span>
+                            <span class="text-[10px] font-bold tracking-widest text-teal uppercase">${displayUser}</span>
                             <span class="text-[10px] font-mono text-gray-500">${dateStr}</span>
                         </div>
                     </div>
@@ -309,7 +484,7 @@
             </div>`;
         }
 
-        // ========== Edit & Interaction ==========
+        // ========== CRUD Logic (Updated to use saveVault) ==========
         function openNote(id = null) {
             const modal = document.getElementById('noteModal');
             const input = document.getElementById('noteInput');
@@ -340,38 +515,31 @@
             } else {
                 state.notes.unshift({ id: Date.now().toString(), content, date: new Date().toISOString(), isPinned: false, imgSeed: Math.floor(Math.random() * 1000) });
             }
-            saveToLocal(); closeModal();
+            saveVault(); closeModal();
         }
         function togglePin(id) {
             const note = state.notes.find(n => n.id === id);
-            if(note) { note.isPinned = !note.isPinned; saveToLocal(); }
+            if(note) { note.isPinned = !note.isPinned; saveVault(); }
         }
         function confirmDelete(id) {
-            if(confirm("Destroy this piece?")) {
+            if(confirm("Permanently destroy this encrypted note?")) {
                 state.notes = state.notes.filter(n => n.id !== id);
-                saveToLocal(); closeModal();
+                saveVault(); closeModal();
             }
         }
 
-        // ========== Share Logic (Updated for Teal Quotes) ==========
+        // ========== Share (Teal Quote) ==========
         async function shareNote(id) {
             const note = state.notes.find(n => n.id === id);
             if(!note) return;
-
             const capture = document.getElementById('shareCaptureArea');
             const bgImg = document.getElementById('shareBgImg');
             
             let rawContent = note.content.trim();
-            if (rawContent.startsWith('“') && rawContent.endsWith('”')) {
-                rawContent = rawContent.substring(1, rawContent.length - 1);
-            } else if (rawContent.startsWith('"') && rawContent.endsWith('"')) {
-                 rawContent = rawContent.substring(1, rawContent.length - 1);
-            }
+            if (rawContent.startsWith('“') && rawContent.endsWith('”')) rawContent = rawContent.substring(1, rawContent.length - 1);
+            else if (rawContent.startsWith('"') && rawContent.endsWith('"')) rawContent = rawContent.substring(1, rawContent.length - 1);
 
-            // 构建带有青色引号的 HTML
             const htmlToShare = `<span class="quote-mark-teal">“</span>${rawContent}<span class="quote-mark-teal">”</span>`;
-
-            // 使用 innerHTML 插入
             document.getElementById('shareTextContent').innerHTML = htmlToShare;
             document.getElementById('shareDateContent').innerText = new Date(note.date).toLocaleDateString('en');
             bgImg.src = `https://picsum.photos/seed/${note.imgSeed}/1080/1920?grayscale&blur=2`;
@@ -389,14 +557,13 @@
                         link.download = `HazeNote_${Date.now()}.png`;
                         link.href = canvas.toDataURL("image/png");
                         link.click();
-                        alert("Saved to gallery (System share not available)");
+                        alert("Saved to gallery");
                     }
                 }, 'image/png');
-            } catch (e) {
-                alert("Error creating quote card.");
-            }
+            } catch (e) { alert("Error generating image"); }
         }
 
+        // ========== Misc ==========
         function toggleSearch() {
             const input = document.getElementById('searchInput');
             if(input.classList.contains('opacity-0')) {
@@ -408,7 +575,7 @@
             if(input.value === '') { input.classList.add('opacity-0', 'pointer-events-none'); }
         }
         function handleSearch(val) { state.searchQuery = val.toLowerCase(); renderNotes(); }
-        function changeView(mode) { state.viewMode = mode; saveToLocal(); document.getElementById('assistiveMenu').classList.add('hidden'); renderNotes(); }
+        function changeView(mode) { state.viewMode = mode; localStorage.setItem('haze_view_mode', mode); document.getElementById('assistiveMenu').classList.add('hidden'); renderNotes(); }
 
         function initDraggableButton() {
             const btn = document.getElementById('assistiveBtn');
@@ -425,10 +592,33 @@
         }
         
         function exportData() {
-            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
-            a.download = `HazeGallery_${Date.now()}.json`; a.click();
+            // Export encrypted vault directly
+            const exportObj = {
+                meta: state.user,
+                vault: localStorage.getItem('haze_vault_v6')
+            };
+            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+            a.download = `HazeVault_Encrypted_${Date.now()}.json`; a.click();
         }
         function triggerImport() { document.getElementById('fileInput').click(); }
+        
+        function importData(input) {
+            const f = input.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = e => {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(d.vault) {
+                        if(confirm("This will overwrite your current vault. Proceed?")) {
+                            localStorage.setItem('haze_meta_v6', JSON.stringify(d.meta));
+                            localStorage.setItem('haze_vault_v6', d.vault);
+                            alert("Vault restored. Please login with the password associated with this backup.");
+                            location.reload();
+                        }
+                    }
+                } catch(err) { alert('Invalid backup file'); }
+            }; r.readAsText(f);
+        }
     </script>
 </body>
 </html>
