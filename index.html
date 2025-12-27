@@ -22,7 +22,7 @@
                     },
                     fontFamily: {
                         sans: ['Urbanist', 'sans-serif'],
-                        serif: ['Playfair Display', 'serif'], // 新增衬线体用于艺术感
+                        serif: ['Playfair Display', 'serif'],
                     },
                     boxShadow: {
                         'glow': '0 0 20px rgba(255, 255, 255, 0.1)',
@@ -47,7 +47,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 沉浸式背景 */
         .blob-bg {
             position: absolute; border-radius: 50%; filter: blur(100px); z-index: 0; opacity: 0.3; pointer-events: none;
         }
@@ -58,17 +57,16 @@
         @keyframes slideDown { from { width: 48px; opacity: 0.5; } to { width: 100%; opacity: 1; } }
         @keyframes slideUp { from { width: 100%; opacity: 1; } to { width: 48px; opacity: 0.5; } }
 
-        /* ================= 艺术画廊布局核心 (Bento Grid) ================= */
+        /* Bento Grid 布局 */
         #noteList {
             display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 两列布局 */
-            grid-auto-rows: 180px; /* 基础高度 */
-            grid-auto-flow: dense; /* 关键：自动填补空隙 */
+            grid-template-columns: repeat(2, 1fr);
+            grid-auto-rows: 180px;
+            grid-auto-flow: dense;
             gap: 12px;
             padding-bottom: 120px;
         }
 
-        /* 卡片基础样式 */
         .note-card {
             position: relative;
             border-radius: 24px;
@@ -79,28 +77,24 @@
         }
         .note-card:active { transform: scale(0.98); }
 
-        /* 布局变体 */
         .card-square { grid-column: span 1; grid-row: span 1; }
         .card-tall   { grid-column: span 1; grid-row: span 2; }
         .card-wide   { grid-column: span 2; grid-row: span 1; }
         .card-big    { grid-column: span 2; grid-row: span 2; }
 
-        /* 背景图片处理 */
         .card-bg-img {
             position: absolute; inset: 0; width: 100%; height: 100%;
             object-fit: cover; opacity: 0.6; z-index: 0;
             transition: transform 0.5s ease;
         }
-        /* 渐变遮罩，保证文字可见 */
         .card-overlay {
             position: absolute; inset: 0; z-index: 1;
             background: linear-gradient(to top, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.1) 100%);
-            backdrop-filter: blur(0px); /* 默认微弱模糊 */
+            backdrop-filter: blur(0px);
         }
         
         .note-content-layer { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; }
 
-        /* AssistiveTouch */
         #floatingContainer { position: fixed; z-index: 999; touch-action: none; }
         .assistive-btn { 
             box-shadow: 0 10px 40px -10px rgba(255,255,255,0.3);
@@ -108,7 +102,7 @@
         }
         .assistive-btn.dragging { transform: scale(1.1); opacity: 0.9; }
 
-        /* 隐藏截图区 */
+        /* 截图区 */
         #shareCaptureArea {
             position: fixed; top: -9999px; left: -9999px; width: 1080px; height: 1920px;
             background: #000; display: flex; flex-direction: column; padding: 100px;
@@ -116,6 +110,12 @@
         }
 
         textarea:focus { outline: none; }
+        
+        /* 确保分享图里的青色引号在各种背景下都清晰 */
+        .quote-mark-teal {
+            color: #85B9C9;
+            display: inline-block;
+        }
     </style>
 </head>
 <body class="flex justify-center min-h-screen bg-black text-white">
@@ -195,19 +195,18 @@
         <img id="shareBgImg" src="" class="absolute inset-0 w-full h-full object-cover opacity-50 grayscale contrast-125">
         <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
         
-        <div class="relative z-10 flex-1 flex flex-col justify-center items-center text-center px-10">
-            <i class="fa-solid fa-quote-left text-4xl text-teal mb-10 opacity-80"></i>
-            <p id="shareTextContent" class="text-[70px] font-serif italic leading-tight text-white mb-10 drop-shadow-2xl"></p>
-            <div class="w-20 h-1 bg-white/50 mb-10"></div>
-            <p id="shareDateContent" class="text-[30px] text-gray-400 font-sans uppercase tracking-[0.3em]"></p>
+        <div class="relative z-10 flex-1 flex flex-col justify-center items-center text-center px-12">
+            <p id="shareTextContent" class="text-[70px] font-serif italic leading-snug text-white mb-16 drop-shadow-2xl"></p>
+            
+            <p id="shareDateContent" class="text-[28px] text-gray-400 font-sans uppercase tracking-[0.4em] opacity-80"></p>
         </div>
         
-        <div class="relative z-10 flex justify-between items-end border-t border-white/20 pt-10 w-full">
+        <div class="relative z-10 flex justify-between items-end border-t border-white/10 pt-10 w-full">
             <div>
                 <h1 class="text-[40px] font-bold text-white tracking-tighter">HazeNote</h1>
                 <p class="text-[24px] text-gray-500 font-serif italic">Curated Thoughts.</p>
             </div>
-            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-glow">
                 <div class="w-2 h-2 bg-black rounded-full"></div>
             </div>
         </div>
@@ -219,7 +218,7 @@
         const CONFIG = { PIN_LIMIT: 3, LONG_PRESS_MS: 500 };
         let state = {
             notes: [],
-            viewMode: localStorage.getItem('haze_view_mode') || 'grid', // 'grid' (Bento) or 'list'
+            viewMode: localStorage.getItem('haze_view_mode') || 'grid',
             searchQuery: '',
             isSearchOpen: false,
             editingId: null
@@ -241,12 +240,10 @@
             renderNotes();
         }
 
-        // ========== Render Logic (The Art Gallery) ==========
+        // ========== Render Logic ==========
         function renderNotes() {
             const list = document.getElementById('noteList');
             let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
-            
-            // 排序: Pin First
             displayNotes.sort((a, b) => (b.isPinned === a.isPinned) ? 0 : a.isPinned ? -1 : 1);
 
             document.getElementById('noteCount').innerText = `${displayNotes.length} ART PIECES`;
@@ -255,9 +252,7 @@
             list.innerHTML = '';
             
             if (state.viewMode === 'list') {
-                list.style.display = 'flex';
-                list.style.flexDirection = 'column';
-                list.style.gap = '1rem';
+                list.style.display = 'flex'; list.style.flexDirection = 'column'; list.style.gap = '1rem';
             } else {
                 list.style.display = 'grid';
             }
@@ -268,45 +263,31 @@
             }
 
             displayNotes.forEach((note, index) => {
-                // 如果没有图片，分配一个随机种子
-                if(!note.imgSeed) {
-                    note.imgSeed = Math.floor(Math.random() * 1000);
-                    saveToLocal(); // 存下来，保证图片不变
-                }
+                if(!note.imgSeed) { note.imgSeed = Math.floor(Math.random() * 1000); saveToLocal(); }
                 
-                // 布局算法：根据内容长度和随机性决定卡片形状 (Bento Logic)
                 let shapeClass = 'card-square'; 
                 if (state.viewMode === 'grid') {
                     const len = note.content.length;
-                    if (note.isPinned) shapeClass = 'card-wide'; // 置顶默认宽卡片
-                    else if (len > 100) shapeClass = 'card-tall'; // 内容多变高
-                    else if (index % 5 === 0) shapeClass = 'card-big'; // 偶尔出现大卡片
+                    if (note.isPinned) shapeClass = 'card-wide';
+                    else if (len > 100) shapeClass = 'card-tall';
+                    else if (index % 5 === 0) shapeClass = 'card-big';
                     else if (index % 3 === 0) shapeClass = 'card-wide';
                 } else {
-                    shapeClass = 'w-full h-[120px]'; // List mode
+                    shapeClass = 'w-full h-[120px]';
                 }
-
                 list.innerHTML += createNoteCard(note, shapeClass);
             });
         }
 
         function createNoteCard(note, shapeClass) {
             const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-            
-            // 使用 Picsum 获取高质量抽象/自然图片，加上 blur 参数增加艺术感，grayscale 降低色彩干扰
-            // 这里使用 picsum.photos/seed/{seed}/{width}/{height} 
             const imgUrl = `https://picsum.photos/seed/${note.imgSeed}/400/600?grayscale&blur=2`;
-            
-            // 如果是 list 模式，不需要复杂的 Grid class
-            const containerClass = state.viewMode === 'list' 
-                ? `note-card w-full min-h-[100px] mb-4`
-                : `note-card ${shapeClass}`;
+            const containerClass = state.viewMode === 'list' ? `note-card w-full min-h-[100px] mb-4` : `note-card ${shapeClass}`;
 
             return `
             <div class="${containerClass}" onclick="openNote('${note.id}')">
                 <img src="${imgUrl}" class="card-bg-img">
                 <div class="card-overlay"></div>
-                
                 <div class="note-content-layer">
                     <div class="flex justify-between items-start">
                         ${note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal text-xs z-20"></i>' : '<div></div>'}
@@ -315,7 +296,6 @@
                             <button onclick="event.stopPropagation(); shareNote('${note.id}')" class="text-white/30 hover:text-white transition"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>
                         </div>
                     </div>
-
                     <div>
                         <p class="text-gray-100 font-medium leading-relaxed ${state.viewMode === 'grid' && shapeClass.includes('big') ? 'text-2xl font-serif italic' : 'text-base'} line-clamp-3 drop-shadow-md">
                             ${note.content}
@@ -334,54 +314,38 @@
             const modal = document.getElementById('noteModal');
             const input = document.getElementById('noteInput');
             const deleteBtn = document.getElementById('deleteBtn');
-            
             modal.classList.remove('hidden');
-            // Fade in
             requestAnimationFrame(() => modal.classList.remove('opacity-0'));
-
             if (id) {
                 const note = state.notes.find(n => n.id === id);
                 state.editingId = id;
                 input.value = note.content;
                 deleteBtn.classList.remove('hidden');
             } else {
-                state.editingId = null;
-                input.value = '';
-                deleteBtn.classList.add('hidden');
+                state.editingId = null; input.value = ''; deleteBtn.classList.add('hidden');
             }
             setTimeout(() => input.focus(), 100);
         }
-
         function closeModal() {
             const modal = document.getElementById('noteModal');
             modal.classList.add('opacity-0');
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
-
         function saveNote() {
             const content = document.getElementById('noteInput').value.trim();
             if (!content) return closeModal();
-
             if (state.editingId) {
                 const note = state.notes.find(n => n.id === state.editingId);
                 if (note) { note.content = content; note.date = new Date().toISOString(); }
             } else {
-                state.notes.unshift({ 
-                    id: Date.now().toString(), 
-                    content, 
-                    date: new Date().toISOString(), 
-                    isPinned: false,
-                    imgSeed: Math.floor(Math.random() * 1000) // New Random Art
-                });
+                state.notes.unshift({ id: Date.now().toString(), content, date: new Date().toISOString(), isPinned: false, imgSeed: Math.floor(Math.random() * 1000) });
             }
             saveToLocal(); closeModal();
         }
-
         function togglePin(id) {
             const note = state.notes.find(n => n.id === id);
             if(note) { note.isPinned = !note.isPinned; saveToLocal(); }
         }
-
         function confirmDelete(id) {
             if(confirm("Destroy this piece?")) {
                 state.notes = state.notes.filter(n => n.id !== id);
@@ -389,7 +353,7 @@
             }
         }
 
-        // ========== Native Share Logic (The Upgrade) ==========
+        // ========== Share Logic (Updated for Teal Quotes) ==========
         async function shareNote(id) {
             const note = state.notes.find(n => n.id === id);
             if(!note) return;
@@ -397,95 +361,69 @@
             const capture = document.getElementById('shareCaptureArea');
             const bgImg = document.getElementById('shareBgImg');
             
-            // 设置分享图内容
-            document.getElementById('shareTextContent').innerText = note.content;
+            let rawContent = note.content.trim();
+            if (rawContent.startsWith('“') && rawContent.endsWith('”')) {
+                rawContent = rawContent.substring(1, rawContent.length - 1);
+            } else if (rawContent.startsWith('"') && rawContent.endsWith('"')) {
+                 rawContent = rawContent.substring(1, rawContent.length - 1);
+            }
+
+            // 构建带有青色引号的 HTML
+            const htmlToShare = `<span class="quote-mark-teal">“</span>${rawContent}<span class="quote-mark-teal">”</span>`;
+
+            // 使用 innerHTML 插入
+            document.getElementById('shareTextContent').innerHTML = htmlToShare;
             document.getElementById('shareDateContent').innerText = new Date(note.date).toLocaleDateString('en');
-            // 使用同样的高清图作为分享背景
             bgImg.src = `https://picsum.photos/seed/${note.imgSeed}/1080/1920?grayscale&blur=2`;
             
-            // 等待图片加载完成再截图（防止黑屏）
             await new Promise(r => setTimeout(r, 500)); 
 
             try {
-                const canvas = await html2canvas(capture, { 
-                    useCORS: true, 
-                    scale: 1, // High Res
-                    backgroundColor: '#000' 
-                });
-
+                const canvas = await html2canvas(capture, { useCORS: true, scale: 1, backgroundColor: '#000' });
                 canvas.toBlob(async (blob) => {
-                    const file = new File([blob], "HazeNote_Art.png", { type: "image/png" });
-
-                    // 1. 尝试调用原生分享 (Mobile)
+                    const file = new File([blob], "HazeNote_Quote.png", { type: "image/png" });
                     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                        try {
-                            await navigator.share({
-                                files: [file],
-                                title: 'HazeNote Art',
-                                text: note.content
-                            });
-                        } catch (err) {
-                            console.log('Share cancelled or failed', err);
-                        }
+                        try { await navigator.share({ files: [file] }); } catch (err) {}
                     } else {
-                        // 2. 降级方案：下载图片 (Desktop)
                         const link = document.createElement('a');
                         link.download = `HazeNote_${Date.now()}.png`;
                         link.href = canvas.toDataURL("image/png");
                         link.click();
-                        alert("Saved to gallery (Native sharing not supported on this device)");
+                        alert("Saved to gallery (System share not available)");
                     }
                 }, 'image/png');
             } catch (e) {
-                alert("Creation failed. Try again.");
-                console.error(e);
+                alert("Error creating quote card.");
             }
         }
 
-        // ========== Search & View ==========
         function toggleSearch() {
-            const container = document.getElementById('searchContainer');
             const input = document.getElementById('searchInput');
-            
             if(input.classList.contains('opacity-0')) {
-                input.classList.remove('opacity-0', 'pointer-events-none');
-                input.classList.add('w-full');
-                input.focus();
-            } else {
-                closeSearch();
-            }
+                input.classList.remove('opacity-0', 'pointer-events-none'); input.classList.add('w-full'); input.focus();
+            } else { closeSearch(); }
         }
         function closeSearch() {
             const input = document.getElementById('searchInput');
-            if(input.value === '') {
-                input.classList.add('opacity-0', 'pointer-events-none');
-            }
+            if(input.value === '') { input.classList.add('opacity-0', 'pointer-events-none'); }
         }
         function handleSearch(val) { state.searchQuery = val.toLowerCase(); renderNotes(); }
         function changeView(mode) { state.viewMode = mode; saveToLocal(); document.getElementById('assistiveMenu').classList.add('hidden'); renderNotes(); }
 
-        // ========== FAB Logic ==========
         function initDraggableButton() {
             const btn = document.getElementById('assistiveBtn');
             const menu = document.getElementById('assistiveMenu');
             let timer;
-            
             btn.addEventListener('click', () => {
-                if(menu.classList.contains('hidden')) openNote(); // Click -> New Note
+                if(menu.classList.contains('hidden')) openNote();
                 else menu.classList.add('hidden');
             });
-
-            // Long Press for Menu
             btn.addEventListener('touchstart', () => {
-                timer = setTimeout(() => {
-                    navigator.vibrate?.(50);
-                    menu.classList.remove('hidden');
-                }, CONFIG.LONG_PRESS_MS);
+                timer = setTimeout(() => { navigator.vibrate?.(50); menu.classList.remove('hidden'); }, CONFIG.LONG_PRESS_MS);
             });
             btn.addEventListener('touchend', () => clearTimeout(timer));
         }
         
-        // Import/Export
         function exportData() {
             const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
             a.download = `HazeGallery_${Date.now()}.json`; a.click();
