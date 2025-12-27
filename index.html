@@ -3,565 +3,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HazeNote V3.5</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <title>Artistic Gallery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
     
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        black: '#000000',
-                        dark: '#111111',
-                        teal: '#85B9C9',
-                        peach: '#FFBE9D',
-                        purple: '#A29BFE',
-                        orange: '#FF6B4A',
-                        danger: '#FF4A4A',
-                    },
-                    fontFamily: {
-                        sans: ['Urbanist', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'deep': '0 20px 50px -12px rgba(0, 0, 0, 1)', // 深度阴影
-                        'glow': '0 0 25px rgba(133, 185, 201, 0.15)', // 微光
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
-        * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
-        body { 
-            background-color: #000000; 
-            color: white; 
-            font-family: 'Urbanist', sans-serif;
-            overscroll-behavior: none; 
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: none;
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
         }
-        
-        #noteList { touch-action: pan-y; }
-        #noteInput { touch-action: auto; user-select: auto; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* 背景光晕 */
-        .blob-bg {
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Lato', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 顶部极简标题 */
+        header {
+            padding: 20px 20px 10px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: #222;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        /* 瀑布流容器 */
+        .gallery-container {
+            column-count: 2; /* 手机端默认两列 */
+            column-gap: 15px;
+            padding: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 响应式：平板和桌面增加列数 */
+        @media (min-width: 768px) {
+            .gallery-container { column-count: 3; }
+        }
+        @media (min-width: 1024px) {
+            .gallery-container { column-count: 4; }
+        }
+
+        /* 卡片样式 */
+        .card-wrapper {
+            break-inside: avoid; /* 防止卡片被断开 */
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background-color: #333; /* 图片加载前的底色 */
+            color: white;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            /* 强制变换，解决部分移动端圆角溢出问题 */
+            transform: translateZ(0); 
+        }
+
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        /* 背景图层 */
+        .card-bg {
             position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.8;
+            /* 关键：混合模式制造艺术感 */
+            mix-blend-mode: hard-light; 
+            filter: contrast(1.1) brightness(0.9);
+        }
+
+        /* 渐变遮罩，保证文字可读性 */
+        .card-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6));
+            z-index: 1;
+        }
+
+        /* 内容区域 */
+        .card-content {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 180px; /* 最小高度 */
+            justify-content: space-between;
+        }
+
+        .date {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            font-family: 'Lato', sans-serif;
+        }
+
+        .title {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            line-height: 1.1;
+            font-weight: 700;
+            margin-top: auto; /* 推到底部 */
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .desc {
+            font-size: 13px;
+            opacity: 0.85;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 分享按钮 */
+        .share-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 3;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.3);
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            filter: blur(80px);
-            z-index: 0;
-            opacity: 0.4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .share-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
+
+        .share-btn.loading {
+            animation: pulse 1s infinite;
+            background: rgba(255,255,255,0.5);
             pointer-events: none;
         }
 
-        /* 搜索框动画 */
-        .search-bar-enter { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .search-bar-exit { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideDown { from { height: 0; opacity: 0; } to { height: 50px; opacity: 1; } }
-        @keyframes slideUp { from { height: 50px; opacity: 1; } to { height: 0; opacity: 0; } }
-
-        /* 滑动操作样式 */
-        .note-container {
-            position: relative;
-            overflow: hidden;
-            border-radius: 32px;
-            margin-bottom: 1rem;
-            touch-action: pan-y;
-        }
-        .note-card-content {
-            position: relative;
-            z-index: 10;
-            background: #111111;
-            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-        .note-actions {
-            position: absolute; top: 0; right: 0; bottom: 0;
-            width: 100%; display: flex; justify-content: flex-end; align-items: center;
-            padding-right: 20px; gap: 12px;
-            background: #1a1a1a; z-index: 1; border-radius: 32px;
-        }
-        
-        /* AssistiveTouch */
-        #floatingContainer { position: fixed; z-index: 999; touch-action: none; }
-        @keyframes breathe {
-            0% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
-            50% { box-shadow: 0 0 20px 4px rgba(133, 185, 201, 0.6); }
-            100% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
-        }
-        .assistive-btn { animation: breathe 3s infinite ease-in-out; transition: transform 0.1s; }
-        .assistive-btn.dragging { animation: none; transform: scale(1.1); opacity: 0.9; }
-        .progress-ring__circle { transition: stroke-dashoffset 0.1s linear; transform: rotate(-90deg); transform-origin: 50% 50%; }
-        .ring-filling { transition: stroke-dashoffset 3s linear !important; stroke-dashoffset: 0 !important; }
-        .menu-pop { animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        @keyframes menuPop { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
-
-        /* Deep Shadow for Top Card (Blue Box Request) */
-        .card-hero-shadow {
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(133, 185, 201, 0.1); 
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
 
-        /* 隐藏的截图区域 */
-        #shareCaptureArea {
-            position: fixed; top: -9999px; left: -9999px;
-            width: 1080px; height: 1920px; /* HD Ratio */
-            background: #000;
-            display: flex; flex-direction: column;
-            padding: 120px;
-            font-family: 'Urbanist', sans-serif;
+        /* 隐藏的加载提示 */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 100;
         }
 
-        textarea:focus { outline: none; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen bg-black text-white">
+<body>
 
-    <div class="blob-bg w-80 h-80 bg-teal/20 top-[-10%] left-[-10%]"></div>
-    <div class="blob-bg w-96 h-96 bg-purple/20 bottom-[-10%] right-[-10%]"></div>
+    <header>
+        <h1>My Gallery</h1>
+    </header>
 
-    <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/50 backdrop-blur-sm">
-        
-        <header class="px-6 pt-14 pb-2 z-20 pointer-events-auto">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-teal to-purple p-[2px] shadow-glow">
-                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Haze" class="w-full h-full rounded-full bg-black">
-                    </div>
-                    <h1 class="text-4xl font-bold text-white tracking-tight leading-none mt-1">My<br/>Notes</h1>
-                </div>
-                
-                <button onclick="toggleSearch()" class="w-12 h-12 rounded-full bg-dark border border-white/10 flex items-center justify-center text-gray-400 hover:text-white transition">
-                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
-                </button>
-            </div>
-
-            <div id="searchContainer" class="hidden overflow-hidden mb-4">
-                <div class="bg-dark border border-white/10 rounded-2xl h-full flex items-center px-4">
-                    <i class="fa-solid fa-filter text-teal mr-3"></i>
-                    <input id="searchInput" type="text" placeholder="Search..." class="bg-transparent w-full text-white placeholder-gray-600 outline-none h-12" oninput="handleSearch(this.value)">
-                    <button onclick="toggleSearch()" class="text-gray-500"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-3 pl-1">
-                <div class="bg-dark border border-white/10 px-4 py-1.5 rounded-full text-xs text-gray-400 font-bold tracking-wide" id="noteCount">
-                    0 Notes
-                </div>
-                <span id="pinCountBadge" class="text-xs bg-purple/20 text-purple px-3 py-1.5 rounded-full border border-purple/20 font-bold hidden">
-                    📌 0/3
-                </span>
-                <div class="bg-dark border border-white/10 px-4 py-1.5 rounded-full text-xs text-teal font-bold tracking-wide flex items-center gap-2">
-                    <i class="fa-solid fa-pen-nib text-[10px]"></i> <span id="wordCount">0</span>
-                </div>
-            </div>
-        </header>
-
-        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-6 no-scrollbar touch-pan-y">
-            </main>
-
-        <div id="floatingContainer" style="top: 80%; left: 80%;">
-            <div id="assistiveMenu" class="absolute bottom-20 right-0 bg-[#1A1A1A]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 w-48 shadow-2xl hidden flex-col gap-1 origin-bottom-right z-50">
-                
-                <button onclick="closeMenu()" class="absolute -top-3 -right-3 w-8 h-8 bg-dark border border-white/10 rounded-full flex items-center justify-center text-gray-400 hover:text-white shadow-lg z-50">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-
-                <button onclick="changeView('list')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                    <i class="fa-solid fa-list text-teal w-5"></i> <span>List View</span>
-                </button>
-                <button onclick="changeView('grid')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                    <i class="fa-solid fa-border-all text-purple w-5"></i> <span>Module View</span>
-                </button>
-                <div class="h-px bg-white/10 my-1"></div>
-                <button onclick="triggerImport()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                    <i class="fa-solid fa-file-import text-gray-500 w-5"></i> <span>Import</span>
-                </button>
-                <button onclick="exportData()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                    <i class="fa-solid fa-file-export text-gray-500 w-5"></i> <span>Export</span>
-                </button>
-            </div>
-
-            <div class="relative w-16 h-16 flex items-center justify-center">
-                <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" width="64" height="64" viewBox="0 0 64 64">
-                    <circle id="ringCircle" class="progress-ring__circle" stroke="#85B9C9" stroke-width="4" fill="transparent" r="28" cx="32" cy="32" 
-                            style="stroke-dasharray: 175.9; stroke-dashoffset: 175.9;"/>
-                </svg>
-                <div id="assistiveBtn" class="assistive-btn w-14 h-14 rounded-full bg-teal text-black text-2xl flex items-center justify-center z-10 cursor-pointer shadow-glow">
-                    <i class="fa-solid fa-plus pointer-events-none"></i>
-                </div>
-            </div>
+    <div class="gallery-container" id="app">
         </div>
-    </div>
 
-    <div id="noteModal" class="fixed inset-0 bg-black z-[60] hidden flex flex-col">
-        <div class="px-6 pt-14 pb-4 flex justify-between items-center">
-            <button onclick="closeModal()" class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white hover:bg-white/10">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-            <span class="text-sm font-bold text-gray-500 tracking-wider">NEW NOTE</span>
-            <button onclick="saveNote()" class="w-12 h-12 rounded-full bg-teal text-black flex items-center justify-center font-bold hover:scale-105 transition">
-                <i class="fa-solid fa-check"></i>
-            </button>
-        </div>
-        <div class="flex-1 px-8 pt-4">
-            <textarea id="noteInput" class="w-full h-full bg-transparent text-white text-2xl font-medium placeholder-gray-700 resize-none leading-relaxed" placeholder="Type your thought..."></textarea>
-        </div>
-        <div class="px-8 pb-10 flex gap-4">
-            <button onclick="setColor('dark')" class="color-btn w-8 h-8 rounded-full bg-[#111111] border border-white/20 ring-2 ring-white ring-offset-2 ring-offset-black"></button>
-            <button onclick="setColor('teal')" class="color-btn w-8 h-8 rounded-full bg-teal"></button>
-            <button onclick="setColor('orange')" class="color-btn w-8 h-8 rounded-full bg-orange"></button>
-            <button onclick="setColor('light')" class="color-btn w-8 h-8 rounded-full bg-[#F6F6F6]"></button>
-        </div>
-    </div>
-
-    <div id="shareCaptureArea">
-        <div class="flex-1 flex flex-col justify-center">
-            <div class="w-20 h-1 bg-teal mb-12"></div>
-            <p id="shareTextContent" class="text-[80px] font-bold leading-tight text-white mb-8"></p>
-            <p id="shareDateContent" class="text-[40px] text-gray-400 font-mono mt-8"></p>
-        </div>
-        <div class="flex justify-between items-end border-t border-white/20 pt-10">
-            <div>
-                <h1 class="text-[60px] font-bold text-white leading-none">HazeNote</h1>
-                <p class="text-[30px] text-gray-500 mt-2">Capture thoughts in style.</p>
-            </div>
-            <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-teal to-purple p-1">
-                <div class="w-full h-full bg-black rounded-full flex items-center justify-center">
-                    <i class="fa-solid fa-bolt text-teal text-[40px]"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
+    <div id="toast">Generating Image...</div>
 
     <script>
-        const CONFIG = { PIN_LIMIT: 3, LONG_PRESS_MS: 3000 };
-        let state = {
-            notes: [],
-            viewMode: localStorage.getItem('haze_view_mode') || 'grid',
-            searchQuery: '',
-            isSearchOpen: false,
-            editingColor: 'dark'
-        };
+        // 1. 数据源
+        const notes = [
+            { id: 1, date: "29 Dec", title: "Year End Party", desc: "Retro Funk theme. Don't forget the dress code!", color: "#e63946" },
+            { id: 2, date: "Today", title: "UI Trend", desc: "Minimalism is evolving into something more fluid.", color: "#2a9d8f" },
+            { id: 3, date: "28 Dec", title: "Design", desc: "Art is not what you see, but what you make others see.", color: "#264653" },
+            { id: 4, date: "Now", title: "Idea", desc: "An app that turns simple notes into museum-worthy posters.", color: "#f4a261" },
+            { id: 5, date: "Future", title: "Vision", desc: "Building the next generation of creative tools.", color: "#1d3557" },
+            { id: 6, date: "Note", title: "Meeting", desc: "Sync with the dev team about the new masonry layout.", color: "#457b9d" }
+        ];
 
-        window.onload = () => {
-            loadNotes();
-            initDraggableButton();
-        };
+        const container = document.getElementById('app');
 
-        function loadNotes() {
-            const saved = localStorage.getItem('haze_notes_v3');
-            if (saved) state.notes = JSON.parse(saved);
-            renderNotes();
-        }
-
-        function saveToLocal() {
-            localStorage.setItem('haze_notes_v3', JSON.stringify(state.notes));
-            localStorage.setItem('haze_view_mode', state.viewMode);
-            renderNotes();
-        }
-
-        // ========== 拖拽与菜单逻辑 ==========
-        function initDraggableButton() {
-            const container = document.getElementById('floatingContainer');
-            const btn = document.getElementById('assistiveBtn');
-            const ring = document.getElementById('ringCircle');
-            const menu = document.getElementById('assistiveMenu');
-            
-            let isDragging = false, startX, startY, initialLeft, initialTop, longPressTimer, isLongPressTriggered = false;
-
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                startX = touch.clientX; startY = touch.clientY;
-                const rect = container.getBoundingClientRect();
-                initialLeft = rect.left; initialTop = rect.top;
-                isDragging = false; isLongPressTriggered = false;
+        // 2. 渲染函数
+        function renderGallery() {
+            notes.forEach((note, index) => {
+                // 随机高度模拟瀑布流内容的参差感 (在 CSS Grid/Column 中主要靠内容撑开)
+                // 这里我们给 desc 加点随机长度的占位文本来模拟真实场景，或者直接设置 min-height
+                const randomHeight = 200 + Math.random() * 100; 
                 
-                menu.classList.add('hidden'); // Close menu on new touch
-                ring.classList.add('ring-filling'); 
-                btn.classList.add('scale-90');
+                // 随机图片 (使用 Picsum, 加 seed 保证每次刷新图片不变)
+                const imgUrl = `https://picsum.photos/seed/${note.id + 50}/400/600`;
 
-                longPressTimer = setTimeout(() => {
-                    isLongPressTriggered = true;
-                    if(navigator.vibrate) navigator.vibrate(50);
-                    menu.classList.remove('hidden');
-                    menu.classList.add('menu-pop');
-                    ring.classList.remove('ring-filling');
-                }, CONFIG.LONG_PRESS_MS);
-            }, {passive: false});
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = 'card-wrapper';
 
-            btn.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - startX;
-                const deltaY = touch.clientY - startY;
-
-                if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
-                    isDragging = true;
-                    clearTimeout(longPressTimer);
-                    ring.classList.remove('ring-filling');
-                    btn.classList.add('dragging');
-                    btn.classList.remove('scale-90');
-                }
-
-                if (isDragging) {
-                    container.style.left = `${initialLeft + deltaX}px`;
-                    container.style.top = `${initialTop + deltaY}px`;
-                }
-            }, {passive: false});
-
-            const endInteraction = () => {
-                clearTimeout(longPressTimer);
-                ring.classList.remove('ring-filling');
-                btn.classList.remove('scale-90');
-                btn.classList.remove('dragging');
-                if (!isDragging && !isLongPressTriggered) openNewNoteModal();
-            };
-
-            btn.addEventListener('touchend', endInteraction);
-        }
-
-        function closeMenu() {
-            document.getElementById('assistiveMenu').classList.add('hidden');
-        }
-
-        // ========== 视图逻辑 ==========
-        function changeView(mode) {
-            state.viewMode = mode;
-            saveToLocal();
-            closeMenu();
-        }
-
-        function toggleSearch() {
-            const container = document.getElementById('searchContainer');
-            state.isSearchOpen = !state.isSearchOpen;
-            if (state.isSearchOpen) {
-                container.classList.remove('hidden', 'search-bar-exit');
-                container.classList.add('search-bar-enter');
-                document.getElementById('searchInput').focus();
-            } else {
-                container.classList.remove('search-bar-enter');
-                container.classList.add('search-bar-exit');
-                setTimeout(() => container.classList.add('hidden'), 300);
-                state.searchQuery = '';
-                document.getElementById('searchInput').value = '';
-                renderNotes();
-            }
-        }
-
-        function handleSearch(val) {
-            state.searchQuery = val.toLowerCase();
-            renderNotes();
-        }
-
-        // ========== 渲染逻辑 ==========
-        function renderNotes() {
-            const list = document.getElementById('noteList');
-            let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
-            
-            displayNotes.sort((a, b) => {
-                if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
-                return new Date(b.date) - new Date(a.date);
-            });
-
-            // Update Counts (Green Area)
-            document.getElementById('noteCount').innerText = `${displayNotes.length} Notes`;
-            
-            // Calc Total Chars/Words
-            const totalChars = displayNotes.reduce((acc, note) => acc + note.content.length, 0);
-            document.getElementById('wordCount').innerText = totalChars;
-
-            const pinnedCount = state.notes.filter(n => n.isPinned).length;
-            const badge = document.getElementById('pinCountBadge');
-            pinnedCount > 0 ? (badge.classList.remove('hidden'), badge.innerText = `📌 ${pinnedCount}/${CONFIG.PIN_LIMIT}`) : badge.classList.add('hidden');
-
-            list.innerHTML = '';
-            if (displayNotes.length === 0) {
-                list.innerHTML = `<div class="text-center mt-20 text-gray-600">No notes found.</div>`;
-                return;
-            }
-
-            displayNotes.forEach((note, index) => {
-                let style = 'dark-simple';
-                if (state.viewMode === 'list') style = 'list';
-                else {
-                    // Top card logic: if not searching, first card gets HERO style
-                    if (index === 0 && !state.searchQuery) style = 'large-hero';
-                    else if (note.color === 'orange') style = 'orange-typo';
-                    else if (note.color === 'teal') style = 'teal-block';
-                    else if (note.color === 'light') style = 'light-clean';
-                }
-                list.innerHTML += createNoteCard(note, style);
-            });
-
-            bindSwipeEvents();
-        }
-
-        function createNoteCard(note, styleType) {
-            const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-            
-            // Blue Box Area: Enhanced Shadow Logic
-            const heroShadow = (styleType === 'large-hero') ? 'card-hero-shadow' : '';
-            const pinnedBorder = note.isPinned ? 'border-teal/50 border-2' : 'border-white/5';
-            const pinIcon = note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal absolute top-5 right-5 z-20 text-lg"></i>' : '';
-
-            let inner = '', wrapperClass = `note-card-content w-full rounded-[32px] p-6 relative z-10 overflow-hidden border ${pinnedBorder} ${heroShadow} `;
-
-            if (styleType === 'list') {
-                wrapperClass += `bg-[#1A1A1A] min-h-[100px] flex items-center justify-between`;
-                inner = `<div class="flex-1 pr-4"><p class="text-gray-200 font-medium line-clamp-1 text-lg">${note.content}</p><span class="text-xs text-gray-500 mt-1 block">${dateStr}</span></div>${note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal text-sm"></i>' : ''}`;
-            } else if (styleType === 'large-hero') {
-                wrapperClass += `bg-[#111111] min-h-[220px] flex flex-col justify-between`;
-                inner = `${pinIcon}
-                        <div class="mt-1"><span class="bg-teal text-black text-[10px] font-bold px-2 py-1 rounded tracking-wider">TODAY</span></div>
-                        <p class="text-3xl font-bold text-gray-100 line-clamp-4 mt-4 leading-tight">${note.content}</p>
-                        <div class="mt-4 text-xs text-gray-500 font-mono text-right">${dateStr}</div>`;
-            } else if (styleType === 'orange-typo') {
-                wrapperClass += `bg-orange text-black min-h-[160px] flex items-center justify-center text-center`;
-                inner = `${pinIcon}<p class="text-4xl font-black uppercase leading-none break-all line-clamp-3">${note.content}</p><span class="absolute bottom-3 right-5 text-xs font-bold opacity-60">${dateStr}</span>`;
-            } else if (styleType === 'teal-block') {
-                wrapperClass += `bg-teal text-black min-h-[140px]`;
-                inner = `${pinIcon}<p class="text-lg font-bold leading-tight line-clamp-4">${note.content}</p><div class="mt-4 pt-2 border-t border-black/10 text-xs font-bold opacity-60 flex justify-between"><span>Memo</span><span>${dateStr}</span></div>`;
-            } else if (styleType === 'light-clean') {
-                wrapperClass += `bg-[#F6F6F6] text-black min-h-[140px]`;
-                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-gray-400 absolute top-4 right-4 z-20"></i>' : ''}<h3 class="text-sm font-bold text-gray-400 mb-2">NOTE</h3><p class="text-gray-800 font-medium line-clamp-3">${note.content}</p>`;
-            } else {
-                wrapperClass += `bg-[#1A1A1A] min-h-[140px]`;
-                inner = `${pinIcon}<p class="text-gray-300 font-medium line-clamp-3 mb-6">${note.content}</p><span class="absolute bottom-4 right-6 text-xs text-gray-600 font-bold tracking-widest">${dateStr}</span>`;
-            }
-
-            return `
-            <div class="note-container" data-id="${note.id}">
-                <div class="note-actions">
-                    <button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-teal' : ''}"></i>
-                    </button>
-                    <button onclick="generateShareImage('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-share-nodes"></i>
-                    </button>
-                    <button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger hover:bg-danger hover:text-white transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-                <div class="${wrapperClass}" id="card-${note.id}">${inner}</div>
-            </div>`;
-        }
-
-        // ========== Share (High Quality Image) ==========
-        function generateShareImage(id) {
-            const note = state.notes.find(n => n.id === id);
-            if(!note) return;
-
-            // 1. Populate Hidden Area
-            const capture = document.getElementById('shareCaptureArea');
-            const dateStr = new Date(note.date).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
-            
-            // Dynamic Styling based on note color
-            if(note.color === 'orange') capture.style.background = '#FF6B4A';
-            else if(note.color === 'teal') capture.style.background = '#85B9C9';
-            else capture.style.background = '#111111'; // default dark
-
-            // Text Color contrast
-            const textColor = (note.color === 'dark' || note.color === undefined) ? 'text-white' : 'text-black';
-            document.getElementById('shareTextContent').className = `text-[80px] font-bold leading-tight mb-8 ${textColor}`;
-            document.getElementById('shareDateContent').className = `text-[40px] font-mono mt-8 ${textColor} opacity-60`;
-
-            document.getElementById('shareTextContent').innerText = note.content;
-            document.getElementById('shareDateContent').innerText = dateStr;
-
-            // 2. Generate Canvas
-            html2canvas(capture, {
-                scale: 1, // Already sized huge (1080x1920) in CSS
-                backgroundColor: null,
-                useCORS: true
-            }).then(canvas => {
-                const imgData = canvas.toDataURL("image/png");
+                const html = `
+                    <div class="card" id="card-${note.id}" style="background-color: ${note.color}; min-height: ${randomHeight}px">
+                        <div class="card-bg" style="background-image: url('${imgUrl}')"></div>
+                        <div class="card-overlay"></div>
+                        <div class="card-content">
+                            <div class="date">${note.date}</div>
+                            <div>
+                                <div class="title">${note.title}</div>
+                                <div class="desc">${note.desc}</div>
+                            </div>
+                        </div>
+                        <div class="share-btn" onclick="shareCard(${note.id}, this)">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 3L12 15M12 3L8 7M12 3L16 7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M5 13V18C5 19.1046 5.89543 20 7 20H17C18.1046 20 19 19.1046 19 18V13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                `;
                 
-                // 3. Trigger Download/Share
-                const link = document.createElement('a');
-                link.download = `HazeNote_Share_${Date.now()}.png`;
-                link.href = imgData;
-                link.click();
+                cardWrapper.innerHTML = html;
+                container.appendChild(cardWrapper);
             });
-            
-            // Reset swipe
-            document.querySelectorAll('.note-card-content').forEach(c => c.style.transform = `translateX(0)`);
         }
 
-        // ========== Swipe Events ==========
-        function bindSwipeEvents() {
-            document.querySelectorAll('.note-container').forEach(el => {
-                const card = el.querySelector('.note-card-content');
-                let startX, currentX;
-                card.addEventListener('touchstart', e => {
-                    startX = e.touches[0].clientX;
-                    document.querySelectorAll('.note-card-content').forEach(c => c !== card && (c.style.transform = `translateX(0)`));
-                }, {passive: true});
-                card.addEventListener('touchmove', e => {
-                    currentX = e.touches[0].clientX;
-                    const diff = currentX - startX;
-                    if (diff < 0 && diff > -180) card.style.transform = `translateX(${diff}px)`;
-                }, {passive: true});
-                card.addEventListener('touchend', e => {
-                    if (currentX - startX < -80) card.style.transform = `translateX(-160px)`;
-                    else card.style.transform = `translateX(0)`;
+        // 3. 核心功能：截图并分享
+        async function shareCard(id, btn) {
+            const card = document.getElementById(`card-${id}`);
+            const toast = document.getElementById('toast');
+            
+            // 动画效果
+            btn.classList.add('loading');
+            toast.style.opacity = '1';
+            
+            try {
+                // 临时隐藏分享按钮，避免截图里出现它
+                const shareBtn = card.querySelector('.share-btn');
+                shareBtn.style.display = 'none';
+
+                // 生成截图
+                // scale: 3 保证高清图
+                const canvas = await html2canvas(card, {
+                    scale: 3, 
+                    useCORS: true, // 允许跨域图片
+                    backgroundColor: null
                 });
-            });
+
+                shareBtn.style.display = 'flex'; // 恢复显示
+
+                // 转换 Canvas 为 Blob
+                canvas.toBlob(async (blob) => {
+                    const file = new File([blob], `art-note-${id}.png`, { type: 'image/png' });
+
+                    // 检查浏览器是否支持 Web Share API (Level 2 支持文件分享)
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'My Art Note',
+                                text: 'Check out this note!'
+                            });
+                        } catch (err) {
+                            console.log('User cancelled share');
+                        }
+                    } else {
+                        // 降级方案：如果是电脑或不支持的浏览器，直接下载图片
+                        const link = document.createElement('a');
+                        link.download = `art-note-${id}.png`;
+                        link.href = canvas.toDataURL();
+                        link.click();
+                        alert("浏览器不支持直接分享，图片已保存到相册/下载文件夹。");
+                    }
+                    
+                    btn.classList.remove('loading');
+                    toast.style.opacity = '0';
+
+                }, 'image/png');
+
+            } catch (err) {
+                console.error(err);
+                alert("生成图片失败，请重试");
+                btn.classList.remove('loading');
+                toast.style.opacity = '0';
+            }
         }
 
-        // ========== Note Logic ==========
-        function setColor(c) {
-            state.editingColor = c;
-            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black'));
-            event.target.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black');
-        }
-        function openNewNoteModal() {
-            document.getElementById('noteInput').value = '';
-            setColor('dark');
-            document.getElementById('noteModal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('noteInput').focus(), 100);
-        }
-        function closeModal() { document.getElementById('noteModal').classList.add('hidden'); }
-        function saveNote() {
-            const content = document.getElementById('noteInput').value.trim();
-            if (!content) return closeModal();
-            state.notes.unshift({ id: Date.now().toString(), content, date: new Date().toISOString(), color: state.editingColor, isPinned: false });
-            saveToLocal(); closeModal();
-        }
-        function togglePin(id) {
-            const note = state.notes.find(n => n.id === id);
-            if (!note) return;
-            if (!note.isPinned && state.notes.filter(n => n.isPinned).length >= CONFIG.PIN_LIMIT) return alert(`Max ${CONFIG.PIN_LIMIT} pins.`);
-            note.isPinned = !note.isPinned; saveToLocal();
-        }
-        function confirmDelete(id) { if(confirm("Delete note?")) { state.notes = state.notes.filter(n => n.id !== id); saveToLocal(); } }
+        // 初始化
+        renderGallery();
 
-        function exportData() {
-            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
-            a.download = `HazeNote_${Date.now()}.json`; a.click();
-        }
-        function triggerImport() { document.getElementById('fileInput').click(); }
-        function importData(input) {
-            const f = input.files[0]; if(!f) return;
-            const r = new FileReader();
-            r.onload = e => {
-                try {
-                    const d = JSON.parse(e.target.result);
-                    if(Array.isArray(d)) { state.notes = [...d.filter(n => !state.notes.some(x=>x.id===n.id)), ...state.notes]; saveToLocal(); alert('Imported.'); }
-                } catch(err) { alert('Invalid file'); }
-            }; r.readAsText(f);
-        }
     </script>
 </body>
 </html>
