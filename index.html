@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HazeNote V3.3</title>
+    <title>HazeNote V3.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,8 +38,14 @@
             color: white; 
             font-family: 'Urbanist', sans-serif;
             overscroll-behavior: none; 
-            user-select: none;
+            user-select: none; /* 禁止选中文本，优化拖拽体验 */
+            -webkit-user-select: none;
+            touch-action: none; /* 全局接管触摸，防止滚动冲突 */
         }
+        
+        /* 允许列表区域滚动 */
+        #noteList { touch-action: pan-y; }
+        #noteInput { touch-action: auto; user-select: auto; -webkit-user-select: auto; }
         
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -66,57 +72,86 @@
             overflow: hidden;
             border-radius: 32px;
             margin-bottom: 1rem;
+            touch-action: pan-y;
         }
         .note-card-content {
             position: relative;
             z-index: 10;
-            background: #111111; /* fallback */
+            background: #111111;
             transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-            touch-action: pan-y; /* 允许垂直滚动，接管水平 */
         }
         .note-actions {
             position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; right: 0; bottom: 0;
             width: 100%;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            padding-right: 20px;
-            gap: 12px;
-            background: #1a1a1a;
-            z-index: 1;
+            display: flex; justify-content: flex-end; align-items: center;
+            padding-right: 20px; gap: 12px;
+            background: #1a1a1a; z-index: 1;
             border-radius: 32px;
         }
         
-        /* Assistive Button Ring Animation */
+        /* --- AssistiveTouch 核心样式 --- */
+        #floatingContainer {
+            position: fixed;
+            z-index: 999;
+            touch-action: none; /* 禁止浏览器默认行为，完全由JS接管拖拽 */
+        }
+
+        /* 呼吸灯效果 */
+        @keyframes breathe {
+            0% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
+            50% { box-shadow: 0 0 20px 4px rgba(133, 185, 201, 0.6); }
+            100% { box-shadow: 0 0 0 0 rgba(133, 185, 201, 0.4); }
+        }
+        
+        .assistive-btn {
+            animation: breathe 3s infinite ease-in-out;
+            transition: transform 0.1s;
+        }
+        
+        /* 拖拽时稍微放大 */
+        .assistive-btn.dragging {
+            animation: none;
+            transform: scale(1.1);
+            opacity: 0.9;
+        }
+
+        /* 进度圆环 */
         .progress-ring__circle {
-            transition: stroke-dashoffset 0.1s linear;
+            transition: stroke-dashoffset 0.1s linear; /* 默认快速重置 */
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
         }
+        
+        /* 长按时的动画类：覆盖上面的 transition，变成3秒线性 */
+        .ring-filling {
+            transition: stroke-dashoffset 3s linear !important;
+            stroke-dashoffset: 0 !important;
+        }
 
-        /* 菜单动画 */
-        .menu-enter { animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        @keyframes menuPop { from { opacity: 0; transform: scale(0.8) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        /* 菜单弹窗 */
+        .menu-pop { 
+            animation: menuPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
+        }
+        @keyframes menuPop { 
+            from { opacity: 0; transform: scale(0.5); } 
+            to { opacity: 1; transform: scale(1); } 
+        }
 
         /* Pinned Style */
-        .pinned-glow {
-            box-shadow: 0 0 0 2px #85B9C9, 0 0 20px rgba(133, 185, 201, 0.3);
-        }
+        .pinned-glow { box-shadow: 0 0 0 2px #85B9C9, 0 0 20px rgba(133, 185, 201, 0.3); }
 
         textarea:focus { outline: none; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen overflow-hidden bg-black">
+<body class="flex justify-center min-h-screen bg-black text-white">
 
     <div class="blob-bg w-80 h-80 bg-teal/20 top-[-10%] left-[-10%]"></div>
     <div class="blob-bg w-96 h-96 bg-purple/20 bottom-[-10%] right-[-10%]"></div>
 
     <div id="mainApp" class="w-full max-w-md h-screen flex flex-col relative z-10 bg-black/50 backdrop-blur-sm">
         
-        <header class="px-6 pt-14 pb-2 z-20">
+        <header class="px-6 pt-14 pb-2 z-20 pointer-events-auto">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-teal to-purple p-[2px]">
@@ -149,36 +184,34 @@
             </div>
         </header>
 
-        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-4 no-scrollbar">
+        <main id="noteList" class="flex-1 overflow-y-auto px-5 pb-32 pt-4 no-scrollbar touch-pan-y">
             </main>
 
-        <div class="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none">
-            <div class="relative pointer-events-auto">
-                <div id="assistiveMenu" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-[#1A1A1A]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-2 w-48 shadow-2xl hidden flex-col gap-1 origin-bottom">
-                    <button onclick="changeView('list')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                        <i class="fa-solid fa-list text-teal w-5"></i> <span>List View</span>
-                    </button>
-                    <button onclick="changeView('grid')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                        <i class="fa-solid fa-border-all text-purple w-5"></i> <span>Module View</span>
-                    </button>
-                    <div class="h-px bg-white/10 my-1"></div>
-                    <button onclick="triggerImport()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                        <i class="fa-solid fa-file-import text-gray-500 w-5"></i> <span>Import</span>
-                    </button>
-                    <button onclick="exportData()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
-                        <i class="fa-solid fa-file-export text-gray-500 w-5"></i> <span>Export</span>
-                    </button>
-                </div>
+        <div id="floatingContainer" style="top: 80%; left: 80%;">
+            <div id="assistiveMenu" class="absolute bottom-20 right-0 bg-[#1A1A1A]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 w-48 shadow-2xl hidden flex-col gap-1 origin-bottom-right z-50">
+                <button onclick="changeView('list')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-list text-teal w-5"></i> <span>List View</span>
+                </button>
+                <button onclick="changeView('grid')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-border-all text-purple w-5"></i> <span>Module View</span>
+                </button>
+                <div class="h-px bg-white/10 my-1"></div>
+                <button onclick="triggerImport()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-file-import text-gray-500 w-5"></i> <span>Import</span>
+                </button>
+                <button onclick="exportData()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-gray-300 hover:text-white transition w-full text-left">
+                    <i class="fa-solid fa-file-export text-gray-500 w-5"></i> <span>Export</span>
+                </button>
+            </div>
 
-                <div class="relative w-16 h-16 flex items-center justify-center">
-                    <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" width="64" height="64">
-                        <circle class="progress-ring__circle" stroke="#85B9C9" stroke-width="4" fill="transparent" r="28" cx="32" cy="32" 
-                                style="stroke-dasharray: 175.9; stroke-dashoffset: 175.9;"/>
-                    </svg>
-                    
-                    <button id="assistiveBtn" class="w-14 h-14 rounded-full bg-teal text-black text-2xl flex items-center justify-center shadow-[0_0_20px_rgba(133,185,201,0.4)] active:scale-90 transition-transform z-10">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <svg class="absolute top-0 left-0 w-full h-full pointer-events-none" width="64" height="64" viewBox="0 0 64 64">
+                    <circle id="ringCircle" class="progress-ring__circle" stroke="#85B9C9" stroke-width="4" fill="transparent" r="28" cx="32" cy="32" 
+                            style="stroke-dasharray: 175.9; stroke-dashoffset: 175.9;"/>
+                </svg>
+                
+                <div id="assistiveBtn" class="assistive-btn w-14 h-14 rounded-full bg-teal text-black text-2xl flex items-center justify-center z-10 cursor-pointer">
+                    <i class="fa-solid fa-plus pointer-events-none"></i>
                 </div>
             </div>
         </div>
@@ -208,33 +241,23 @@
     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="importData(this)">
 
     <script>
-        // ========== 状态管理 ==========
-        const CONFIG = {
-            PIN_LIMIT: 3,
-            LONG_PRESS_MS: 3000 // 3秒长按
-        };
-
+        const CONFIG = { PIN_LIMIT: 3, LONG_PRESS_MS: 3000 };
         let state = {
             notes: [],
-            viewMode: localStorage.getItem('haze_view_mode') || 'grid', // 'grid' | 'list'
+            viewMode: localStorage.getItem('haze_view_mode') || 'grid',
             searchQuery: '',
             isSearchOpen: false,
-            editingColor: 'dark',
-            pressTimer: null,
-            startTime: 0
+            editingColor: 'dark'
         };
 
-        // ========== 初始化 ==========
         window.onload = () => {
             loadNotes();
-            setupAssistiveTouch();
+            initDraggableButton(); // 初始化拖拽逻辑
         };
 
         function loadNotes() {
             const saved = localStorage.getItem('haze_notes_v3');
-            if (saved) {
-                state.notes = JSON.parse(saved);
-            }
+            if (saved) state.notes = JSON.parse(saved);
             renderNotes();
         }
 
@@ -244,21 +267,110 @@
             renderNotes();
         }
 
+        // ========== 核心交互：拖拽 + 长按 + 单击 ==========
+        function initDraggableButton() {
+            const container = document.getElementById('floatingContainer');
+            const btn = document.getElementById('assistiveBtn');
+            const ring = document.getElementById('ringCircle');
+            const menu = document.getElementById('assistiveMenu');
+            
+            // 状态变量
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+            let longPressTimer = null;
+            let isLongPressTriggered = false;
+
+            // 1. 触摸开始
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 防止滚动
+                const touch = e.touches[0];
+                
+                // 记录初始位置
+                startX = touch.clientX;
+                startY = touch.clientY;
+                const rect = container.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+                
+                isDragging = false;
+                isLongPressTriggered = false;
+                
+                // 隐藏菜单（如果之前打开了）
+                menu.classList.add('hidden');
+                menu.classList.remove('menu-pop');
+
+                // 开始长按动画
+                ring.classList.add('ring-filling'); 
+                btn.classList.add('scale-90'); // 按下反馈
+
+                // 启动定时器
+                longPressTimer = setTimeout(() => {
+                    isLongPressTriggered = true;
+                    if(navigator.vibrate) navigator.vibrate(50);
+                    // 显示菜单
+                    menu.classList.remove('hidden');
+                    menu.classList.add('menu-pop');
+                    // 重置圆环
+                    ring.classList.remove('ring-filling');
+                }, CONFIG.LONG_PRESS_MS);
+            }, {passive: false});
+
+            // 2. 触摸移动 (拖拽逻辑)
+            btn.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                // 如果移动超过 5px，视为拖拽，取消长按
+                if (!isDragging && (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5)) {
+                    isDragging = true;
+                    clearTimeout(longPressTimer);
+                    ring.classList.remove('ring-filling'); // 立即取消动画
+                    btn.classList.add('dragging'); // 改变样式
+                    btn.classList.remove('scale-90');
+                }
+
+                if (isDragging) {
+                    // 更新位置
+                    container.style.left = `${initialLeft + deltaX}px`;
+                    container.style.top = `${initialTop + deltaY}px`;
+                }
+            }, {passive: false});
+
+            // 3. 触摸结束
+            const endInteraction = () => {
+                clearTimeout(longPressTimer);
+                ring.classList.remove('ring-filling'); // 重置动画
+                btn.classList.remove('scale-90');
+                btn.classList.remove('dragging');
+
+                if (isDragging) {
+                    // 拖拽结束，什么都不做，位置保留
+                    // 可以加吸附逻辑，但用户要求“自由拖到想拖的地方”
+                } else if (!isLongPressTriggered) {
+                    // 不是拖拽，也没触发长按 -> 视为单击
+                    openNewNoteModal();
+                }
+                // 如果 isLongPressTriggered 为 true，菜单已经打开了，不用处理
+            };
+
+            btn.addEventListener('touchend', endInteraction);
+            btn.addEventListener('touchcancel', endInteraction);
+        }
+
         // ========== 视图与搜索 ==========
         function changeView(mode) {
             state.viewMode = mode;
-            saveToLocal(); // 保存视图偏好
-            document.getElementById('assistiveMenu').classList.remove('menu-enter');
-            setTimeout(() => document.getElementById('assistiveMenu').classList.add('hidden'), 200);
+            saveToLocal();
+            document.getElementById('assistiveMenu').classList.add('hidden');
         }
 
         function toggleSearch() {
             const container = document.getElementById('searchContainer');
             state.isSearchOpen = !state.isSearchOpen;
-            
             if (state.isSearchOpen) {
-                container.classList.remove('hidden');
-                container.classList.remove('search-bar-exit');
+                container.classList.remove('hidden', 'search-bar-exit');
                 container.classList.add('search-bar-enter');
                 document.getElementById('searchInput').focus();
             } else {
@@ -276,344 +388,143 @@
             renderNotes();
         }
 
-        // ========== 核心渲染逻辑 ==========
+        // ========== 渲染逻辑 ==========
         function renderNotes() {
             const list = document.getElementById('noteList');
-            const noteCountEl = document.getElementById('noteCount');
-            const pinBadge = document.getElementById('pinCountBadge');
-            
-            // 1. 过滤
             let displayNotes = state.notes.filter(n => n.content.toLowerCase().includes(state.searchQuery));
             
-            // 2. 排序：置顶优先 -> 日期倒序
+            // 排序: 置顶 > 日期
             displayNotes.sort((a, b) => {
                 if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
                 return new Date(b.date) - new Date(a.date);
             });
 
-            // 更新 UI 计数
-            noteCountEl.innerText = `${displayNotes.length} Notes`;
+            // 统计
+            document.getElementById('noteCount').innerText = `${displayNotes.length} Notes`;
             const pinnedCount = state.notes.filter(n => n.isPinned).length;
-            if (pinnedCount > 0) {
-                pinBadge.classList.remove('hidden');
-                pinBadge.innerText = `📌 ${pinnedCount}/${CONFIG.PIN_LIMIT}`;
-            } else {
-                pinBadge.classList.add('hidden');
-            }
+            const badge = document.getElementById('pinCountBadge');
+            pinnedCount > 0 ? (badge.classList.remove('hidden'), badge.innerText = `📌 ${pinnedCount}/${CONFIG.PIN_LIMIT}`) : badge.classList.add('hidden');
 
-            // 3. 构建 HTML
             list.innerHTML = '';
-            
             if (displayNotes.length === 0) {
                 list.innerHTML = `<div class="text-center mt-20 text-gray-600">No notes found.</div>`;
                 return;
             }
 
-            if (state.viewMode === 'list') {
-                // 列表模式：统一高度，紧凑
-                displayNotes.forEach(note => {
-                    list.innerHTML += createNoteCard(note, 'list');
-                });
-            } else {
-                // 模块模式 (Grid/Bento)
-                // 第一张显示大卡片，其余根据颜色或索引显示不同样式
-                displayNotes.forEach((note, index) => {
-                    let style = 'dark-simple';
-                    if (index === 0 && !state.searchQuery) style = 'large-hero'; // 只有非搜索状态第一个才大
+            displayNotes.forEach((note, index) => {
+                let style = 'dark-simple';
+                if (state.viewMode === 'list') style = 'list';
+                else {
+                    if (index === 0 && !state.searchQuery) style = 'large-hero';
                     else if (note.color === 'orange') style = 'orange-typo';
                     else if (note.color === 'teal') style = 'teal-block';
                     else if (note.color === 'light') style = 'light-clean';
-                    
-                    list.innerHTML += createNoteCard(note, style);
-                });
-            }
+                }
+                list.innerHTML += createNoteCard(note, style);
+            });
 
-            // 4. 绑定手势事件
             bindSwipeEvents();
         }
 
         function createNoteCard(note, styleType) {
             const dateStr = new Date(note.date).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-            const isPinnedClass = note.isPinned ? 'pinned-glow' : '';
+            const pinnedClass = note.isPinned ? 'pinned-glow' : '';
             const pinIcon = note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal absolute top-4 right-4 z-20"></i>' : '';
 
-            // 内部 HTML 结构生成
-            let innerHTML = '';
-            let wrapperClass = `note-card-content w-full rounded-[32px] p-6 relative z-10 overflow-hidden border border-white/5 ${isPinnedClass} `;
+            let inner = '', wrapperClass = `note-card-content w-full rounded-[32px] p-6 relative z-10 overflow-hidden border border-white/5 ${pinnedClass} `;
 
-            // 样式定义
             if (styleType === 'list') {
                 wrapperClass += `bg-[#1A1A1A] min-h-[100px] flex items-center justify-between`;
-                innerHTML = `
-                    <div class="flex-1 pr-4">
-                        <p class="text-gray-200 font-medium line-clamp-1 text-lg">${note.content}</p>
-                        <span class="text-xs text-gray-500 mt-1 block">${dateStr}</span>
-                    </div>
-                    ${note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal text-sm"></i>' : ''}
-                `;
+                inner = `<div class="flex-1 pr-4"><p class="text-gray-200 font-medium line-clamp-1 text-lg">${note.content}</p><span class="text-xs text-gray-500 mt-1 block">${dateStr}</span></div>${note.isPinned ? '<i class="fa-solid fa-thumbtack text-teal text-sm"></i>' : ''}`;
             } else if (styleType === 'large-hero') {
                 wrapperClass += `bg-[#111111] min-h-[200px] flex flex-col justify-between`;
-                innerHTML = `
-                    ${pinIcon}
-                    <div class="mt-2"><span class="bg-teal text-black text-xs font-bold px-2 py-1 rounded">TODAY</span></div>
-                    <p class="text-2xl font-bold text-gray-100 line-clamp-4 mt-4">${note.content}</p>
-                    <div class="mt-4 text-xs text-gray-500 font-mono text-right">${dateStr}</div>
-                `;
+                inner = `${pinIcon}<div class="mt-2"><span class="bg-teal text-black text-xs font-bold px-2 py-1 rounded">TODAY</span></div><p class="text-2xl font-bold text-gray-100 line-clamp-4 mt-4">${note.content}</p><div class="mt-4 text-xs text-gray-500 font-mono text-right">${dateStr}</div>`;
             } else if (styleType === 'orange-typo') {
                 wrapperClass += `bg-orange text-black min-h-[160px] flex items-center justify-center text-center`;
-                innerHTML = `
-                    ${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}
-                    <p class="text-4xl font-black uppercase leading-none break-all line-clamp-3">${note.content}</p>
-                    <span class="absolute bottom-3 right-5 text-xs font-bold opacity-60">${dateStr}</span>
-                `;
+                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}<p class="text-4xl font-black uppercase leading-none break-all line-clamp-3">${note.content}</p><span class="absolute bottom-3 right-5 text-xs font-bold opacity-60">${dateStr}</span>`;
             } else if (styleType === 'teal-block') {
                 wrapperClass += `bg-teal text-black min-h-[140px]`;
-                innerHTML = `
-                    ${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}
-                    <p class="text-lg font-bold leading-tight line-clamp-4">${note.content}</p>
-                    <div class="mt-4 pt-2 border-t border-black/10 text-xs font-bold opacity-60 flex justify-between">
-                        <span>Memo</span><span>${dateStr}</span>
-                    </div>
-                `;
+                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-black absolute top-4 right-4 z-20 opacity-50"></i>' : ''}<p class="text-lg font-bold leading-tight line-clamp-4">${note.content}</p><div class="mt-4 pt-2 border-t border-black/10 text-xs font-bold opacity-60 flex justify-between"><span>Memo</span><span>${dateStr}</span></div>`;
             } else if (styleType === 'light-clean') {
                 wrapperClass += `bg-[#F6F6F6] text-black min-h-[140px]`;
-                innerHTML = `
-                    ${note.isPinned ? '<i class="fa-solid fa-thumbtack text-gray-400 absolute top-4 right-4 z-20"></i>' : ''}
-                    <h3 class="text-sm font-bold text-gray-400 mb-2">NOTE</h3>
-                    <p class="text-gray-800 font-medium line-clamp-3">${note.content}</p>
-                `;
+                inner = `${note.isPinned ? '<i class="fa-solid fa-thumbtack text-gray-400 absolute top-4 right-4 z-20"></i>' : ''}<h3 class="text-sm font-bold text-gray-400 mb-2">NOTE</h3><p class="text-gray-800 font-medium line-clamp-3">${note.content}</p>`;
             } else {
-                // dark-simple
                 wrapperClass += `bg-[#1A1A1A] min-h-[140px]`;
-                innerHTML = `
-                    ${pinIcon}
-                    <p class="text-gray-300 font-medium line-clamp-3 mb-6">${note.content}</p>
-                    <span class="absolute bottom-4 right-6 text-xs text-gray-600 font-bold tracking-widest">${dateStr}</span>
-                `;
+                inner = `${pinIcon}<p class="text-gray-300 font-medium line-clamp-3 mb-6">${note.content}</p><span class="absolute bottom-4 right-6 text-xs text-gray-600 font-bold tracking-widest">${dateStr}</span>`;
             }
 
-            // 返回完整的可滑动结构
-            return `
-            <div class="note-container" data-id="${note.id}">
-                <div class="note-actions">
-                    <button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-teal' : ''}"></i>
-                    </button>
-                    <button onclick="shareNote('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white transition">
-                        <i class="fa-solid fa-bolt"></i>
-                    </button>
-                    <button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger hover:bg-danger hover:text-white transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </div>
-                <div class="${wrapperClass}" id="card-${note.id}">
-                    ${innerHTML}
-                </div>
-            </div>`;
+            return `<div class="note-container" data-id="${note.id}"><div class="note-actions"><button onclick="togglePin('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white"><i class="fa-solid fa-thumbtack ${note.isPinned ? 'text-teal' : ''}"></i></button><button onclick="shareNote('${note.id}')" class="w-10 h-10 rounded-full bg-dark flex items-center justify-center text-gray-400 hover:text-white"><i class="fa-solid fa-bolt"></i></button><button onclick="confirmDelete('${note.id}')" class="w-10 h-10 rounded-full bg-danger/20 flex items-center justify-center text-danger hover:bg-danger hover:text-white"><i class="fa-solid fa-trash"></i></button></div><div class="${wrapperClass}" id="card-${note.id}">${inner}</div></div>`;
         }
 
-        // ========== AssistiveTouch 逻辑 (3秒长按) ==========
-        function setupAssistiveTouch() {
-            const btn = document.getElementById('assistiveBtn');
-            const ring = document.querySelector('.progress-ring__circle');
-            const menu = document.getElementById('assistiveMenu');
-            const radius = ring.r.baseVal.value;
-            const circumference = radius * 2 * Math.PI;
-
-            ring.style.strokeDasharray = `${circumference} ${circumference}`;
-            ring.style.strokeDashoffset = circumference;
-
-            let timer;
-            let isLongPress = false;
-
-            const startPress = (e) => {
-                // e.preventDefault(); // 防止滚动干扰? 不要阻止，否则无法点击
-                isLongPress = false;
-                menu.classList.remove('menu-enter');
-                menu.classList.add('hidden');
-                
-                ring.style.transition = `stroke-dashoffset ${CONFIG.LONG_PRESS_MS}ms linear`;
-                ring.style.strokeDashoffset = '0'; // 开始转圈
-
-                timer = setTimeout(() => {
-                    isLongPress = true;
-                    // 长按触发
-                    if(navigator.vibrate) navigator.vibrate(50);
-                    menu.classList.remove('hidden');
-                    menu.classList.add('menu-enter');
-                    ring.style.transition = 'none'; // reset ring
-                    ring.style.strokeDashoffset = circumference;
-                }, CONFIG.LONG_PRESS_MS);
-            };
-
-            const endPress = (e) => {
-                clearTimeout(timer);
-                ring.style.transition = 'stroke-dashoffset 0.2s ease-out';
-                ring.style.strokeDashoffset = circumference; // 回退
-
-                if (!isLongPress) {
-                    // 短按：新建笔记
-                    openNewNoteModal();
-                }
-            };
-
-            // Touch events for mobile
-            btn.addEventListener('touchstart', startPress, {passive: true});
-            btn.addEventListener('touchend', endPress);
-            
-            // Mouse events for desktop testing
-            btn.addEventListener('mousedown', startPress);
-            btn.addEventListener('mouseup', endPress);
-        }
-
-        // ========== 手势 (Swipe) 逻辑 ==========
+        // ========== 手势 ==========
         function bindSwipeEvents() {
             document.querySelectorAll('.note-container').forEach(el => {
                 const card = el.querySelector('.note-card-content');
                 let startX, currentX;
-                let isSwiping = false;
-
                 card.addEventListener('touchstart', e => {
                     startX = e.touches[0].clientX;
-                    isSwiping = false;
-                    // 重置其他已打开的卡片
-                    document.querySelectorAll('.note-card-content').forEach(c => {
-                        if(c !== card) c.style.transform = `translateX(0)`;
-                    });
+                    // Reset others
+                    document.querySelectorAll('.note-card-content').forEach(c => c !== card && (c.style.transform = `translateX(0)`));
                 }, {passive: true});
-
                 card.addEventListener('touchmove', e => {
                     currentX = e.touches[0].clientX;
                     const diff = currentX - startX;
-                    // 只能向左滑
-                    if (diff < 0 && diff > -180) { 
-                        card.style.transform = `translateX(${diff}px)`;
-                        isSwiping = true;
-                    }
+                    if (diff < 0 && diff > -180) card.style.transform = `translateX(${diff}px)`;
                 }, {passive: true});
-
                 card.addEventListener('touchend', e => {
-                    const diff = currentX - startX;
-                    if (diff < -80) { // 阈值，超过展开
-                        card.style.transform = `translateX(-160px)`;
-                    } else {
-                        card.style.transform = `translateX(0)`;
-                    }
+                    if (currentX - startX < -80) card.style.transform = `translateX(-160px)`;
+                    else card.style.transform = `translateX(0)`;
                 });
             });
         }
 
-        // ========== 笔记操作 ==========
-        
-        // 颜色选择
+        // ========== 笔记功能 ==========
         function setColor(c) {
             state.editingColor = c;
-            document.querySelectorAll('.color-btn').forEach(b => {
-                b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black');
-            });
+            document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black'));
             event.target.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-black');
         }
-
         function openNewNoteModal() {
             document.getElementById('noteInput').value = '';
             setColor('dark');
             document.getElementById('noteModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('noteInput').focus(), 100);
         }
-
-        function closeModal() {
-            document.getElementById('noteModal').classList.add('hidden');
-        }
-
+        function closeModal() { document.getElementById('noteModal').classList.add('hidden'); }
         function saveNote() {
             const content = document.getElementById('noteInput').value.trim();
             if (!content) return closeModal();
-
-            const newNote = {
-                id: Date.now().toString(),
-                content: content,
-                date: new Date().toISOString(),
-                color: state.editingColor,
-                isPinned: false
-            };
-            
-            state.notes.unshift(newNote);
-            saveToLocal();
-            closeModal();
+            state.notes.unshift({ id: Date.now().toString(), content, date: new Date().toISOString(), color: state.editingColor, isPinned: false });
+            saveToLocal(); closeModal();
         }
-
         function togglePin(id) {
             const note = state.notes.find(n => n.id === id);
             if (!note) return;
-
-            const currentPins = state.notes.filter(n => n.isPinned).length;
-
-            if (note.isPinned) {
-                note.isPinned = false;
-            } else {
-                if (currentPins >= CONFIG.PIN_LIMIT) {
-                    alert(`Max ${CONFIG.PIN_LIMIT} pinned notes allowed.`);
-                    return;
-                }
-                note.isPinned = true;
-            }
-            saveToLocal();
+            if (!note.isPinned && state.notes.filter(n => n.isPinned).length >= CONFIG.PIN_LIMIT) return alert(`Max ${CONFIG.PIN_LIMIT} pins.`);
+            note.isPinned = !note.isPinned; saveToLocal();
         }
-
-        function confirmDelete(id) {
-            if (confirm("Are you sure you want to delete this note?")) {
-                state.notes = state.notes.filter(n => n.id !== id);
-                saveToLocal();
-            }
-        }
-
+        function confirmDelete(id) { if(confirm("Delete note?")) { state.notes = state.notes.filter(n => n.id !== id); saveToLocal(); } }
         function shareNote(id) {
-            const note = state.notes.find(n => n.id === id);
-            if (navigator.share) {
-                navigator.share({
-                    title: 'HazeNote',
-                    text: note.content
-                }).catch(console.error);
-            } else {
-                navigator.clipboard.writeText(note.content).then(() => alert('Copied to clipboard'));
-            }
+            const n = state.notes.find(x => x.id === id);
+            navigator.share ? navigator.share({title:'HazeNote',text:n.content}) : (navigator.clipboard.writeText(n.content), alert('Copied'));
         }
 
-        // ========== 数据 I/O ==========
+        // ========== I/O ==========
         function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
-            const a = document.createElement('a');
-            a.href = dataStr;
-            a.download = `HazeNote_Backup_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
+            const a = document.createElement('a'); a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.notes));
+            a.download = `HazeNote_${Date.now()}.json`; a.click();
         }
-
-        function triggerImport() {
-            document.getElementById('fileInput').click();
-        }
-
+        function triggerImport() { document.getElementById('fileInput').click(); }
         function importData(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            const f = input.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = e => {
                 try {
-                    const imported = JSON.parse(e.target.result);
-                    if (Array.isArray(imported)) {
-                        // Merge strategies: Keep unique IDs
-                        const existingIds = new Set(state.notes.map(n => n.id));
-                        const newNotes = imported.filter(n => !existingIds.has(n.id));
-                        state.notes = [...newNotes, ...state.notes];
-                        saveToLocal();
-                        alert(`Imported ${newNotes.length} notes.`);
-                    }
-                } catch (err) {
-                    alert('Invalid file format');
-                }
-            };
-            reader.readAsText(file);
+                    const d = JSON.parse(e.target.result);
+                    if(Array.isArray(d)) { state.notes = [...d.filter(n => !state.notes.some(x=>x.id===n.id)), ...state.notes]; saveToLocal(); alert('Imported.'); }
+                } catch(err) { alert('Invalid file'); }
+            }; r.readAsText(f);
         }
-
     </script>
 </body>
 </html>
