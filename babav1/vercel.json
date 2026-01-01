@@ -1,21 +1,8 @@
 {
-  "version": 2,
-  "functions": {
-    "api/summarize-book.js": {
-      "maxDuration": 120
-    },
-    "api/tts.js": {
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/summarize-book",
-      "destination": "/api/summarize-book"
-    },
-    {
-      "source": "/api/tts",
-      "destination": "/api/tts"
+      "src": "**/*",
+      "use": "@vercel/static"
     }
   ]
 }
